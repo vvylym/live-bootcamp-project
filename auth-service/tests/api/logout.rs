@@ -4,7 +4,7 @@ use super::helpers::TestApp;
 async fn test_logout() {
     let app = TestApp::new().await;
 
-    let response = app.logout().await;
+    let response = app.post_logout().await;
 
     assert_eq!(response.status().as_u16(), 200);
     assert_eq!(response.headers().get("content-type"), None);

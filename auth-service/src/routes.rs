@@ -1,6 +1,56 @@
-use axum::{routing::post, Router};
+use axum::{
+    routing::{get, post},
+    Json, Router,
+};
+use utoipa::OpenApi;
+use utoipa_rapidoc::RapiDoc;
 
 use crate::handlers::*;
+
+#[derive(OpenApi)]
+#[openapi(
+    info(
+        title = "Auth Service API",
+        description = "Auth Service OpenAPI Specification. This document describes all of the operations available through the Auth Service API.", 
+        contact(
+            name = "vvylym",
+            url = "https://github.com/vvylym/live-bootcamp-project",
+            email = "235853469+vvylym@users.noreply.github.com",
+        ),
+        license(
+            name = "MIT",
+            url = "https://opensource.org/license/mit",
+        ),
+        version = "0.1.0",
+    ),
+    servers(
+        (url = "http://localhost:3000", description = "Local development server"),
+    ),
+    paths(
+        handle_signup,
+        handle_login,
+        handle_logout,
+        handle_verify_2fa,
+        handle_verify_token,
+        openapi,
+    ), 
+    components(
+        schemas(
+            crate::models::SignUpRequest,
+            crate::models::LoginRequest,
+            crate::models::Verify2faRequest,
+            crate::models::VerifyTokenRequest,
+            crate::models::SignUpResponse,
+            crate::models::MFARequiredResponse,
+            crate::models::ErrorResponse
+        ),
+    ),
+    tags(
+        (name = "auth", description = "Authentication endpoints."),
+        (name = "docs", description = "Documentation endpoints."),
+    ),
+)]
+struct ApiDoc;
 
 pub fn api_routes() -> Router {
     Router::new()
@@ -9,4 +59,19 @@ pub fn api_routes() -> Router {
         .route("/signup", post(handle_signup))
         .route("/verify-2fa", post(handle_verify_2fa))
         .route("/verify-token", post(handle_verify_token))
+        .route("/api-docs/openapi.json", get(openapi))
+        .merge(RapiDoc::new("/api-docs/openapi.json").path("/api-docs"))
+}
+
+#[utoipa::path(
+    get,
+    path = "/docs/openapi.json",
+    description = "OPENAPI Json specifications file",
+    tag = "docs",
+    responses(
+        (status = 200, description = "JSON file", body = ())
+    )
+)]
+async fn openapi() -> Json<utoipa::openapi::OpenApi> {
+    Json(ApiDoc::openapi())
 }

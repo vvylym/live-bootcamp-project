@@ -1,11 +1,12 @@
 //! Auth Service library
-//! 
+//!
 //! This module contains the core application logic for the Auth Service.
 //! It defines the `Application` struct, which encapsulates the server setup and routing.
-//! 
+//!
 //! The `Application` struct provides methods to build and run the service.
 //! It uses the `axum` framework for routing and handling HTTP requests.
 pub mod handlers;
+pub mod models;
 pub mod routes;
 
 use routes::api_routes;
@@ -29,18 +30,14 @@ impl Application {
         // Move the Router definition from `main.rs` to here.
         // Also, remove the `hello` route.
         // We don't need it at this point!
-        let router = api_routes()
-            .fallback_service(ServeDir::new("assets"));
+        let router = api_routes().fallback_service(ServeDir::new("assets"));
 
         let listener = TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
         let server = axum::serve(listener, router);
 
         // Create a new Application instance and return it
-        Ok(Self {
-            server,
-            address,
-        })
+        Ok(Self { server, address })
     }
 
     /// Runs the application server.
