@@ -5,7 +5,12 @@
 //! 
 //! The `Application` struct provides methods to build and run the service.
 //! It uses the `axum` framework for routing and handling HTTP requests.
-use axum::{http::StatusCode, response::{Html, IntoResponse}, routing::{get, post}, serve::Serve, Router};
+pub mod handlers;
+pub mod routes;
+
+use routes::api_routes;
+
+use axum::{serve::Serve, Router};
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
 
@@ -24,10 +29,8 @@ impl Application {
         // Move the Router definition from `main.rs` to here.
         // Also, remove the `hello` route.
         // We don't need it at this point!
-        let router = Router::new()
-            .route_service("/", ServeDir::new("assets"))
-            .route("/hello", get(hello_handler))
-            .route("/signup", post(signup));
+        let router = api_routes()
+            .fallback_service(ServeDir::new("assets"));
 
         let listener = TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
@@ -45,13 +48,4 @@ impl Application {
         println!("listening on {}", &self.address);
         self.server.await
     }
-}
-
-
-pub async fn hello_handler() -> Html<&'static str> {
-    Html("<h1>Auth Service</h1><br/><p>More coming soon...</p>")
-}
-
-async fn signup() -> impl IntoResponse {
-    StatusCode::OK.into_response()
 }

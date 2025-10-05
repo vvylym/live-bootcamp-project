@@ -1,12 +1,12 @@
 use auth_service::Application;
-use reqwest::{Client, ClientBuilder};
+use reqwest::Client;
 
 /// A helper struct to spawn and interact with a test instance of our application.
 pub struct TestApp {
     /// The address of the running instance of our application.
     pub address: String,
     /// The HTTP client to interact with the application.
-    pub http_client: reqwest::Client,
+    pub http_client: Client,
 }
 
 impl TestApp {
