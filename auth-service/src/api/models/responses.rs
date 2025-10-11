@@ -1,13 +1,13 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Defines the response model for successful sign-up.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, ToSchema)]
 #[schema(example = json!({
     "message": "User created successfully."
 }))]
 pub struct SignUpResponse {
-    message: String,
+    pub message: String,
 }
 
 /// Defines the response model for successful login requiring 2FA.

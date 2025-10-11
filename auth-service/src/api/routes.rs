@@ -5,7 +5,9 @@ use axum::{
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
-use crate::handlers::*;
+use crate::api::AppState;
+
+use super::handlers::*;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -36,13 +38,13 @@ use crate::handlers::*;
     ), 
     components(
         schemas(
-            crate::models::SignUpRequest,
-            crate::models::LoginRequest,
-            crate::models::Verify2faRequest,
-            crate::models::VerifyTokenRequest,
-            crate::models::SignUpResponse,
-            crate::models::MFARequiredResponse,
-            crate::models::ErrorResponse
+            super::models::SignUpRequest,
+            super::models::LoginRequest,
+            super::models::Verify2faRequest,
+            super::models::VerifyTokenRequest,
+            super::models::SignUpResponse,
+            super::models::MFARequiredResponse,
+            super::models::ErrorResponse
         ),
     ),
     tags(
@@ -52,7 +54,7 @@ use crate::handlers::*;
 )]
 struct ApiDoc;
 
-pub fn api_routes() -> Router {
+pub fn api_routes(app_state: AppState) -> Router {
     Router::new()
         .route("/login", post(handle_login))
         .route("/logout", post(handle_logout))
@@ -61,6 +63,7 @@ pub fn api_routes() -> Router {
         .route("/verify-token", post(handle_verify_token))
         .route("/api-docs/openapi.json", get(openapi))
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/api-docs"))
+        .with_state(app_state)
 }
 
 #[utoipa::path(

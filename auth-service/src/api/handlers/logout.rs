@@ -1,5 +1,5 @@
 use axum::{http::StatusCode, response::IntoResponse};
-use crate::models::ErrorResponse;
+use crate::api::models::ErrorResponse;
 
 #[utoipa::path(
     post,

@@ -1,6 +1,6 @@
 use axum::{http::StatusCode, response::IntoResponse, Json};
 
-use crate::models::{Verify2faRequest, ErrorResponse};
+use crate::api::models::{Verify2faRequest, ErrorResponse};
 
 #[utoipa::path(
     post,

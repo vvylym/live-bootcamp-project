@@ -7,7 +7,7 @@ use validator::Validate;
 #[schema(example = json!({
     "email": "email@example.com",
     "password": "secret",
-    "requires_2fa": true
+    "requires2FA": true
 }))]
 pub struct SignUpRequest {
     /// The user's email address.
