@@ -1,6 +1,6 @@
 use axum::{http::StatusCode, response::IntoResponse, Json};
 
-use crate::api::models::{ErrorResponse, LoginRequest, MFARequiredResponse};
+use crate::api::dtos::{ErrorResponse, LoginRequest, MFARequiredResponse};
 
 #[utoipa::path(
     post,

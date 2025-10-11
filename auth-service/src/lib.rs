@@ -9,8 +9,4 @@ pub mod api;
 pub mod domain;
 pub mod services;
 
-pub use api::{
-    Application,
-    AppState,
-    UserStoreType
-};
+pub use api::{AppState, Application, UserStoreType};

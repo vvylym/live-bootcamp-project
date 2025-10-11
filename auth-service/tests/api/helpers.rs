@@ -1,4 +1,8 @@
-use auth_service::{api::{AppState, UserStoreType}, domain::user::User, Application};
+use auth_service::{
+    api::{AppState, UserStoreType},
+    domain::user::User,
+    Application,
+};
 use reqwest::Client;
 use uuid::Uuid;
 
@@ -13,7 +17,6 @@ pub struct TestApp {
 impl TestApp {
     /// Spawns a new instance of our application and returns a `TestApp` instance.
     pub async fn new() -> Self {
-
         let user_store = UserStoreType::default();
         user_store
             .write()
@@ -22,14 +25,11 @@ impl TestApp {
                 "default@user.com".to_string(),
                 "secret".to_string(),
                 false,
-        ))
+            ))
             .expect("Failed to add default user");
         let app_state = AppState::new(user_store);
 
-        let app = Application::build(
-            app_state,
-            "127.0.0.1:0"
-        )
+        let app = Application::build(app_state, "127.0.0.1:0")
             .await
             .expect("Failed to build app");
 

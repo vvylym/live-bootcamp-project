@@ -1,5 +1,12 @@
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+use crate::domain::error::AuthAPIError;
 
 /// Defines the response model for successful sign-up.
 #[derive(Debug, Serialize, Deserialize, PartialEq, ToSchema)]
@@ -25,11 +32,27 @@ pub struct MFARequiredResponse {
 }
 
 /// Defines the error response model.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[schema(example = json!({
     "error": "Invalid credentials."
 }))]
 pub struct ErrorResponse {
     /// The error message.
     pub error: String,
+}
+
+impl IntoResponse for AuthAPIError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            AuthAPIError::UserAlreadyExists => (StatusCode::CONFLICT, "User already exists"),
+            AuthAPIError::InvalidCredentials => (StatusCode::BAD_REQUEST, "Invalid credentials"),
+            AuthAPIError::UnexpectedError => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error")
+            }
+        };
+        let body = Json(ErrorResponse {
+            error: error_message.to_string(),
+        });
+        (status, body).into_response()
+    }
 }

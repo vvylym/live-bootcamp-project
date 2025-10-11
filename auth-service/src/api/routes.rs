@@ -35,16 +35,16 @@ use super::handlers::*;
         handle_verify_2fa,
         handle_verify_token,
         openapi,
-    ), 
+    ),
     components(
         schemas(
-            super::models::SignUpRequest,
-            super::models::LoginRequest,
-            super::models::Verify2faRequest,
-            super::models::VerifyTokenRequest,
-            super::models::SignUpResponse,
-            super::models::MFARequiredResponse,
-            super::models::ErrorResponse
+            super::dtos::SignUpRequest,
+            super::dtos::LoginRequest,
+            super::dtos::Verify2faRequest,
+            super::dtos::VerifyTokenRequest,
+            super::dtos::SignUpResponse,
+            super::dtos::MFARequiredResponse,
+            super::dtos::ErrorResponse
         ),
     ),
     tags(

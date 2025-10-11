@@ -1,11 +1,11 @@
 pub mod handlers;
-pub mod models;
+pub mod dtos;
 pub mod routes;
 
 use routes::api_routes;
 
-use std::sync::Arc;
 use axum::{serve::Serve, Router};
+use std::sync::Arc;
 use tokio::{net::TcpListener, sync::RwLock};
 use tower_http::services::ServeDir;
 
@@ -36,12 +36,14 @@ pub struct Application {
 
 impl Application {
     /// Builds a new instance of the `Application`.
-    pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn build(
+        app_state: AppState,
+        address: &str,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         // Move the Router definition from `main.rs` to here.
         // Also, remove the `hello` route.
         // We don't need it at this point!
-        let router = api_routes(app_state)
-            .fallback_service(ServeDir::new("assets"));
+        let router = api_routes(app_state).fallback_service(ServeDir::new("assets"));
 
         let listener = TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();

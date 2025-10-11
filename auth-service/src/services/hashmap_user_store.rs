@@ -42,7 +42,6 @@ impl HashmapUserStore {
         }
     }
 
-
     // TODO: Implement a public method called `validate_user`, which takes an
     // immutable reference to self, an email string slice, and a password string slice
     // as arguments. `validate_user` should return a `Result` type containing either a
@@ -91,16 +90,11 @@ mod tests {
             false,
         );
         let _ = store.add_user(user.clone());
-        let result = store.get_user(
-            "user@example.com"
-        );
+        let result = store.get_user("user@example.com");
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), user);
-        let result = store.get_user(
-            "user2@example.com"
-        );
+        let result = store.get_user("user2@example.com");
         assert_eq!(result, Err(UserStoreError::UserNotFound));
-        
     }
 
     #[tokio::test]
@@ -112,17 +106,11 @@ mod tests {
             false,
         );
         let _ = store.add_user(user.clone());
-        let result = store.validate_user(
-            "user@example.com", "password123"
-        );
+        let result = store.validate_user("user@example.com", "password123");
         assert_eq!(result, Ok(()));
-        let result = store.validate_user(
-            "user@example.com", "password124"
-        );
+        let result = store.validate_user("user@example.com", "password124");
         assert_eq!(result, Err(UserStoreError::InvalidCredentials));
-        let result = store.validate_user(
-            "user3@example.com", "password123"
-        );
+        let result = store.validate_user("user3@example.com", "password123");
         assert_eq!(result, Err(UserStoreError::UserNotFound));
     }
 }

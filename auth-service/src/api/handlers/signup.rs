@@ -1,6 +1,10 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 
-use crate::{api::models::{ErrorResponse, SignUpRequest, SignUpResponse}, domain::user::User, services::hashmap_user_store::UserStoreError, AppState};
+use crate::{
+    api::dtos::{ErrorResponse, SignUpRequest, SignUpResponse},
+    domain::{error::AuthAPIError, user::User},
+    AppState,
+};
 
 #[utoipa::path(
     post,
@@ -18,27 +22,29 @@ use crate::{api::models::{ErrorResponse, SignUpRequest, SignUpResponse}, domain:
 )]
 pub async fn handle_signup(
     State(state): State<AppState>,
-    Json(_input): Json<SignUpRequest>,
-) -> impl IntoResponse {
-    let user = User::new(
-        _input.email,
-        _input.password,
-        _input.requires_2fa,
-    );
-    let mut user_store = state
-        .user_store
-        .write()
-        .await;
-    
+    Json(request): Json<SignUpRequest>,
+) -> Result<impl IntoResponse, AuthAPIError> {
+    let email = request.email;
+    let password = request.password;
+
+    if email.is_empty() || !email.contains("@") || password.len() < 8 {
+        return Err(AuthAPIError::InvalidCredentials);
+    };
+
+    let user = User::new(email, password, request.requires_2fa);
+    let mut user_store = state.user_store.write().await;
+
+    if user_store.get_user(&user.email).is_ok() {
+        return Err(AuthAPIError::UserAlreadyExists);
+    }
+
     user_store
         .add_user(user)
-        .map(
-            |_| (StatusCode::CREATED, Json(SignUpResponse{ message: "User created successfully!".to_string() }))
-        )
-        .map_err(
-            |e| match e {
-                UserStoreError::UserAlreadyExists => (StatusCode::CONFLICT, Json(ErrorResponse{ error: "Ok".to_string() })),
-                _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse{ error: "Ok".to_string() })),
-            }
-        )
+        .map_err(|_| AuthAPIError::UnexpectedError)?;
+
+    let response = Json(SignUpResponse {
+        message: "User created successfully!".to_string(),
+    });
+
+    Ok((StatusCode::CREATED, response))
 }
