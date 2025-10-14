@@ -2,11 +2,14 @@
 FROM rust:1.85-alpine AS chef
 USER root
 # Add cargo-chef to cache dependencies
-RUN apk add --no-cache musl-dev & cargo install cargo-chef
+RUN apk add --no-cache musl-dev && cargo install cargo-chef
 WORKDIR /app
 
 FROM chef AS planner
-COPY . .
+# Copy workspace files first
+COPY Cargo.toml Cargo.lock ./
+COPY app-service/ ./app-service/
+COPY auth-service/ ./auth-service/
 # Capture info needed to build dependencies
 RUN cargo chef prepare --recipe-path recipe.json
 
@@ -14,7 +17,7 @@ FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 # Build dependencies - this is the caching Docker layer!
 RUN cargo chef cook --release --recipe-path recipe.json
-# Build application
+# Build application - copy entire workspace
 COPY . .
 RUN cargo build --release --bin app-service
 
@@ -23,6 +26,6 @@ RUN cargo build --release --bin app-service
 FROM debian:buster-slim AS runtime
 WORKDIR /app
 COPY --from=builder /app/target/release/app-service /usr/local/bin
-COPY --from=builder /app/assets /app/assets
+COPY --from=builder /app/app-service/assets /app/app-service/assets
 ENV AUTH_SERVICE_HOST_NAME=auth-service
 ENTRYPOINT ["/usr/local/bin/app-service"]
