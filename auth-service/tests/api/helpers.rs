@@ -1,7 +1,7 @@
 use auth_service::{
+    Application,
     api::{AppState, UserStoreType},
     domain::user::User,
-    Application,
 };
 use reqwest::Client;
 use uuid::Uuid;

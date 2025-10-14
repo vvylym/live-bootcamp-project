@@ -1,13 +1,12 @@
-pub mod handlers;
 pub mod dtos;
+pub mod handlers;
 pub mod routes;
 
 use routes::api_routes;
 
-use axum::{serve::Serve, Router};
+use axum::{Router, serve::Serve};
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::RwLock};
-use tower_http::services::ServeDir;
 
 use crate::services::hashmap_user_store::HashmapUserStore;
 
@@ -43,7 +42,7 @@ impl Application {
         // Move the Router definition from `main.rs` to here.
         // Also, remove the `hello` route.
         // We don't need it at this point!
-        let router = api_routes(app_state).fallback_service(ServeDir::new("assets"));
+        let router = api_routes(app_state);
 
         let listener = TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();

@@ -2,10 +2,10 @@ use std::env;
 
 use askama::Template;
 use axum::{
+    Json, Router,
     http::StatusCode,
     response::{Html, IntoResponse},
     routing::get,
-    Json, Router,
 };
 use axum_extra::extract::CookieJar;
 use serde::Serialize;
@@ -14,9 +14,9 @@ use tower_http::services::ServeDir;
 #[tokio::main]
 async fn main() {
     let app = Router::new()
-        .nest_service("/assets", ServeDir::new("assets"))
         .route("/", get(root))
-        .route("/protected", get(protected));
+        .route("/protected", get(protected))
+        .fallback_service(ServeDir::new("app-service/assets"));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
 

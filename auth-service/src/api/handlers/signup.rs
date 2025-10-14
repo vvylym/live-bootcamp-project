@@ -1,9 +1,9 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 
 use crate::{
+    AppState,
     api::dtos::{ErrorResponse, SignUpRequest, SignUpResponse},
     domain::{error::AuthAPIError, user::User},
-    AppState,
 };
 
 #[utoipa::path(

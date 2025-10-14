@@ -1,7 +1,8 @@
 use axum::{
-    routing::{get, post},
     Json, Router,
+    routing::{get, post},
 };
+use tower_http::services::ServeDir;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
@@ -63,12 +64,13 @@ pub fn api_routes(app_state: AppState) -> Router {
         .route("/verify-token", post(handle_verify_token))
         .route("/api-docs/openapi.json", get(openapi))
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/api-docs"))
+        .fallback_service(ServeDir::new("auth-service/assets"))
         .with_state(app_state)
 }
 
 #[utoipa::path(
     get,
-    path = "/docs/openapi.json",
+    path = "/api-docs/openapi.json",
     description = "OPENAPI Json specifications file",
     tag = "docs",
     responses(

@@ -1,6 +1,6 @@
 use auth_service::api::dtos::{ErrorResponse, SignUpResponse};
 
-use super::helpers::{get_random_email, TestApp};
+use super::helpers::{TestApp, get_random_email};
 
 #[tokio::test]
 async fn should_return_422_if_malformed_input() {
