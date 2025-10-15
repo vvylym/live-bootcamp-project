@@ -1,12 +1,13 @@
 use axum::{
     Json, Router,
+    response::Html,
     routing::{get, post},
 };
 use tower_http::services::ServeDir;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
-use crate::api::AppState;
+use crate::{api::AppState, domain::data_stores::UserStore};
 
 use super::handlers::*;
 
@@ -55,8 +56,9 @@ use super::handlers::*;
 )]
 struct ApiDoc;
 
-pub fn api_routes(app_state: AppState) -> Router {
+pub fn api_routes<S: UserStore>(app_state: AppState<S>) -> Router {
     Router::new()
+        .route("/", get(handle_root))
         .route("/login", post(handle_login))
         .route("/logout", post(handle_logout))
         .route("/signup", post(handle_signup))
@@ -64,6 +66,7 @@ pub fn api_routes(app_state: AppState) -> Router {
         .route("/verify-token", post(handle_verify_token))
         .route("/api-docs/openapi.json", get(openapi))
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/api-docs"))
+        .nest_service("/assets", ServeDir::new("auth-service/assets"))
         .fallback_service(ServeDir::new("auth-service/assets"))
         .with_state(app_state)
 }
@@ -79,4 +82,9 @@ pub fn api_routes(app_state: AppState) -> Router {
 )]
 async fn openapi() -> Json<utoipa::openapi::OpenApi> {
     Json(ApiDoc::openapi())
+}
+
+/// Serves the root HTML page
+async fn handle_root() -> Html<&'static str> {
+    Html(include_str!("../../assets/index.html"))
 }

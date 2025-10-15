@@ -8,18 +8,21 @@ use axum::{Router, serve::Serve};
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::RwLock};
 
-use crate::services::hashmap_user_store::HashmapUserStore;
+use crate::{domain::data_stores::UserStore, services::hashmap_user_store::HashmapUserStore};
 
 // Using a type alias to improve readability!
 pub type UserStoreType = Arc<RwLock<HashmapUserStore>>;
 
 #[derive(Clone)]
-pub struct AppState {
-    pub user_store: UserStoreType,
+pub struct AppState<S: UserStore> {
+    pub user_store: Arc<RwLock<S>>,
 }
 
-impl AppState {
-    pub fn new(user_store: UserStoreType) -> Self {
+impl<S> AppState<S>
+where
+    S: UserStore,
+{
+    pub fn new(user_store: Arc<RwLock<S>>) -> Self {
         Self { user_store }
     }
 }
@@ -35,8 +38,8 @@ pub struct Application {
 
 impl Application {
     /// Builds a new instance of the `Application`.
-    pub async fn build(
-        app_state: AppState,
+    pub async fn build<S: UserStore>(
+        app_state: AppState<S>,
         address: &str,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         // Move the Router definition from `main.rs` to here.

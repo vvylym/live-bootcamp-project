@@ -16,7 +16,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(root))
         .route("/protected", get(protected))
-        .fallback_service(ServeDir::new("app-service/assets"));
+        .nest_service("/assets", ServeDir::new("app-service/assets"));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
 

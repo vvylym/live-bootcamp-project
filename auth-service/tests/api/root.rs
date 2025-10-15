@@ -7,5 +7,13 @@ async fn test_root() {
     let response = app.get_root().await;
 
     assert_eq!(response.status().as_u16(), 200);
-    assert_eq!(response.headers().get("content-type").unwrap(), "text/html");
+    assert!(
+        response
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .starts_with("text/html")
+    );
 }

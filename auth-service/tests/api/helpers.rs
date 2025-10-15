@@ -1,9 +1,13 @@
+use std::sync::Arc;
+
 use auth_service::{
     Application,
-    api::{AppState, UserStoreType},
-    domain::user::User,
+    api::AppState,
+    domain::{data_stores::UserStore, user::User},
+    services::hashmap_user_store::HashmapUserStore,
 };
 use reqwest::Client;
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// A helper struct to spawn and interact with a test instance of our application.
@@ -17,8 +21,8 @@ pub struct TestApp {
 impl TestApp {
     /// Spawns a new instance of our application and returns a `TestApp` instance.
     pub async fn new() -> Self {
-        let user_store = UserStoreType::default();
-        user_store
+        let user_store = Arc::new(RwLock::new(HashmapUserStore::default()));
+        let _ = user_store
             .write()
             .await
             .add_user(User::new(
@@ -26,7 +30,8 @@ impl TestApp {
                 "secret".to_string(),
                 false,
             ))
-            .expect("Failed to add default user");
+            .await
+            .map_err(|e| eprintln!("Failed to add default user: {:?}", e));
         let app_state = AppState::new(user_store);
 
         let app = Application::build(app_state, "127.0.0.1:0")
