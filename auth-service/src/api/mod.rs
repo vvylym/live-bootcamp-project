@@ -8,7 +8,7 @@ use axum::{Router, serve::Serve};
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::RwLock};
 
-use crate::{domain::data_stores::UserStore, services::hashmap_user_store::HashmapUserStore};
+use crate::{domain::ports::UserStore, services::hashmap_user_store::HashmapUserStore};
 
 // Using a type alias to improve readability!
 pub type UserStoreType = Arc<RwLock<HashmapUserStore>>;

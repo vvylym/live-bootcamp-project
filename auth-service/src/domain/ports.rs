@@ -1,19 +1,21 @@
-use super::user::User;
+use crate::domain::models::{Email, Password};
+
+use super::models::User;
 use std::future::Future;
 
 /// A trait for a user store.
 pub trait UserStore: Send + Sync + Clone + 'static {
     /// Adds a user to the store.
-    fn add_user(&mut self, user: User) -> impl Future<Output = Result<(), UserStoreError>> + Send;
+    fn add_user(&mut self, user: &User) -> impl Future<Output = Result<(), UserStoreError>> + Send;
 
     /// Gets a user from the store.
-    fn get_user(&self, email: &str) -> impl Future<Output = Result<User, UserStoreError>> + Send;
+    fn get_user(&self, email: &Email) -> impl Future<Output = Result<User, UserStoreError>> + Send;
 
     /// Validates a user.
     fn validate_user(
         &self,
-        email: &str,
-        password: &str,
+        email: &Email,
+        password: &Password,
     ) -> impl Future<Output = Result<(), UserStoreError>> + Send;
 }
 

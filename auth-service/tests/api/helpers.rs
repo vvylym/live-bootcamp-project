@@ -3,7 +3,7 @@ use std::sync::Arc;
 use auth_service::{
     Application,
     api::AppState,
-    domain::{data_stores::UserStore, user::User},
+    domain::{ports::UserStore, models::User},
     services::hashmap_user_store::HashmapUserStore,
 };
 use reqwest::Client;
@@ -22,16 +22,6 @@ impl TestApp {
     /// Spawns a new instance of our application and returns a `TestApp` instance.
     pub async fn new() -> Self {
         let user_store = Arc::new(RwLock::new(HashmapUserStore::default()));
-        let _ = user_store
-            .write()
-            .await
-            .add_user(User::new(
-                "default@user.com".to_string(),
-                "secret".to_string(),
-                false,
-            ))
-            .await
-            .map_err(|e| eprintln!("Failed to add default user: {:?}", e));
         let app_state = AppState::new(user_store);
 
         let app = Application::build(app_state, "127.0.0.1:0")

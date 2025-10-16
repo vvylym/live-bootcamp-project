@@ -1,9 +1,7 @@
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 
 use crate::{
-    AppState,
-    api::dtos::{ErrorResponse, SignUpRequest, SignUpResponse},
-    domain::{data_stores::UserStore, error::AuthAPIError, user::User},
+    api::dtos::{ErrorResponse, SignUpRequest, SignUpResponse}, domain::{error::AuthAPIError, models::{Password, Email, User}, ports::UserStore}, AppState
 };
 
 #[utoipa::path(
@@ -24,14 +22,14 @@ pub async fn handle_signup<S: UserStore>(
     State(state): State<AppState<S>>,
     Json(request): Json<SignUpRequest>,
 ) -> Result<impl IntoResponse, AuthAPIError> {
-    let email = request.email;
-    let password = request.password;
+    let email = Email::parse(&request.email)?;
+    let password = Password::parse(&request.password)?;
 
-    if email.is_empty() || !email.contains("@") || password.len() < 8 {
-        return Err(AuthAPIError::InvalidCredentials);
-    };
-
-    let user = User::new(email, password, request.requires_2fa);
+    let user = User::new(
+        email, 
+        password,
+        request.requires_2fa
+    );
     let mut user_store = state.user_store.write().await;
 
     if user_store.get_user(&user.email).await.is_ok() {
@@ -39,7 +37,7 @@ pub async fn handle_signup<S: UserStore>(
     }
 
     user_store
-        .add_user(user)
+        .add_user(&user)
         .await
         .map_err(|_| AuthAPIError::UnexpectedError)?;
 

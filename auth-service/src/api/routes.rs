@@ -7,7 +7,7 @@ use tower_http::services::ServeDir;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
-use crate::{api::AppState, domain::data_stores::UserStore};
+use crate::{api::AppState, domain::ports::UserStore};
 
 use super::handlers::*;
 
@@ -66,7 +66,6 @@ pub fn api_routes<S: UserStore>(app_state: AppState<S>) -> Router {
         .route("/verify-token", post(handle_verify_token))
         .route("/api-docs/openapi.json", get(openapi))
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/api-docs"))
-        .nest_service("/assets", ServeDir::new("auth-service/assets"))
         .fallback_service(ServeDir::new("auth-service/assets"))
         .with_state(app_state)
 }

@@ -17,4 +17,7 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 validator = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
+fake = { workspace = true }
+quickcheck = { workspace = true }
+quickcheck_macros = { workspace = true }
 reqwest = { workspace = true, default-features = false, features = ["json"] }
