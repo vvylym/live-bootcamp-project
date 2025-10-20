@@ -1,4 +1,5 @@
 /// Domain-specific errors for the authentication service.
+#[derive(Debug)]
 pub enum AuthAPIError {
     /// Indicates that the provided password is not valid.
     InvalidPassword,
@@ -8,6 +9,8 @@ pub enum AuthAPIError {
     UserAlreadyExists,
     /// Indicates that the provided credentials are invalid.
     InvalidCredentials,
+    /// Indicates that the provided credentials are incorrect.
+    IncorrectCredentials,
     /// Indicates that an unexpected error occurred.
     UnexpectedError,
 }

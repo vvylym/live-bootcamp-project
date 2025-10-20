@@ -29,10 +29,10 @@ pub struct SignUpRequest {
 }))]
 pub struct LoginRequest {
     /// The user's email address.
-    #[validate(email)]
+    //#[validate(email)]
     pub email: String,
     /// The user's password.
-    #[validate(length(min = 4))]
+    //#[validate(length(min = 4))]
     pub password: String,
 }
 

@@ -34,14 +34,15 @@ jobs:
     - name: Build and test app-service code
       working-directory: ./app-service
       run: |
-        cargo build --verbose
-        cargo test --verbose
+        cargo build -p app-service --verbose
+        cargo test -p app-service --verbose
 
     - name: Build and test auth-service code
       working-directory: ./auth-service
       run: |
-        cargo build --verbose
-        cargo test --verbose
+        export JWT_SECRET=secret
+        cargo build -p auth-service --verbose
+        cargo test -p auth-service --verbose
 
       # Set up Docker Buildx for multi-platform builds
     - name: Set up Docker Buildx
@@ -92,7 +93,8 @@ jobs:
         password: ${{ secrets.DROPLET_PASSWORD }}
         script: |
           cd ~
+          export JWT_SECRET=${{ secrets.JWT_SECRET }}
           export AUTH_SERVICE_IP=${{ vars.DROPLET_IP }}
-          docker compose down
-          docker compose pull
-          docker compose up -d
+          docker-compose down
+          docker-compose pull
+          docker-compose up -d
