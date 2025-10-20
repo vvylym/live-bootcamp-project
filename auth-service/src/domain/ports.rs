@@ -1,6 +1,4 @@
-use crate::domain::models::{Email, Password};
-
-use super::models::User;
+use super::models::{Email, Password, User};
 use std::future::Future;
 
 /// A trait for a user store.

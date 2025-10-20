@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use crate::domain::{
     models::{Email, Password, User},
     ports::{UserStore, UserStoreError},
 };
+use std::collections::HashMap;
 
 // TODO: Create a new struct called `HashmapUserStore` containing a `users` field
 // which stores a `HashMap`` of email `String`s mapped to `User` objects.
@@ -19,7 +19,8 @@ impl UserStore for HashmapUserStore {
         if self.users.contains_key(user.email.as_ref()) {
             return Err(UserStoreError::UserAlreadyExists);
         }
-        self.users.insert(user.email.as_ref().to_owned(), user.to_owned());
+        self.users
+            .insert(user.email.as_ref().to_owned(), user.to_owned());
         Ok(())
     }
 
@@ -36,7 +37,11 @@ impl UserStore for HashmapUserStore {
     }
 
     /// Validates a user.
-    async fn validate_user(&self, email: &Email, password: &Password) -> Result<(), UserStoreError> {
+    async fn validate_user(
+        &self,
+        email: &Email,
+        password: &Password,
+    ) -> Result<(), UserStoreError> {
         match self.users.get(email.as_ref()) {
             Some(user) => {
                 if user.password.as_ref() == password.as_ref() {
@@ -57,13 +62,17 @@ mod tests {
 
     fn default_email(email: &'static str) -> Email {
         Email::parse(email)
-            .map_err(move |_| { panic!("Failed to create email"); })
+            .map_err(move |_| {
+                panic!("Failed to create email");
+            })
             .unwrap()
     }
 
     fn default_password(password: &'static str) -> Password {
         Password::parse(password)
-            .map_err(move |_| { panic!("Failed to create password"); })
+            .map_err(move |_| {
+                panic!("Failed to create password");
+            })
             .unwrap()
     }
 
@@ -72,11 +81,7 @@ mod tests {
         let mut store = HashmapUserStore::default();
         let email = default_email("user@example.com");
         let password = default_password("password123");
-        let user = User::new(
-            email,
-            password,
-            false,
-        );
+        let user = User::new(email, password, false);
         let result = store.add_user(&user).await;
         assert_eq!(result, Ok(()));
         let result = store.add_user(&user).await;
@@ -88,11 +93,7 @@ mod tests {
         let mut store = HashmapUserStore::default();
         let email = default_email("user@example.com");
         let password = default_password("password123");
-        let user: User = User::new(
-            email.clone(),
-            password,
-            false,
-        );
+        let user: User = User::new(email.clone(), password, false);
         let _ = store.add_user(&user).await;
         let result = store.get_user(&email).await;
         assert!(result.is_ok());
@@ -109,19 +110,13 @@ mod tests {
         let another_email = default_email("user2@example.com");
         let another_password = default_password("password123");
         let password = default_password("password124");
-        let user: User = User::new(
-            email.clone(),
-            password.clone(),
-            false,
-        );
+        let user: User = User::new(email.clone(), password.clone(), false);
         let _ = store.add_user(&user).await;
         let result = store.validate_user(&email, &password).await;
         assert_eq!(result, Ok(()));
         let result = store.validate_user(&email, &another_password).await;
         assert_eq!(result, Err(UserStoreError::InvalidCredentials));
-        let result = store
-            .validate_user(&another_email, &password)
-            .await;
+        let result = store.validate_user(&another_email, &password).await;
         assert_eq!(result, Err(UserStoreError::UserNotFound));
     }
 }

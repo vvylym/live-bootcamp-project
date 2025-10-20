@@ -1,13 +1,8 @@
 use std::sync::Arc;
-
-use auth_service::{
-    Application,
-    api::AppState,
-    domain::{ports::UserStore, models::User},
-    services::hashmap_user_store::HashmapUserStore,
-};
-use reqwest::Client;
 use tokio::sync::RwLock;
+
+use auth_service::{Application, api::AppState, services::hashmap_user_store::HashmapUserStore};
+use reqwest::Client;
 use uuid::Uuid;
 
 /// A helper struct to spawn and interact with a test instance of our application.
