@@ -15,7 +15,7 @@ lazy_static = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
-tower-http = { workspace = true, features = ["fs"] }
+tower-http = { workspace = true, features = ["fs", "cors"] }
 utoipa = { workspace = true, features = ["axum_extras", "uuid"] }
 utoipa-rapidoc = { workspace = true, features = ["axum"] }
 uuid = { workspace = true, features = ["v4", "serde"] }

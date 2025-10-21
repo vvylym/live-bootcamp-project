@@ -11,6 +11,10 @@ pub enum AuthAPIError {
     InvalidCredentials,
     /// Indicates that the provided credentials are incorrect.
     IncorrectCredentials,
+    /// Indicates that the provided token is missing.
+    MissingToken,
+    /// Indicates that the provided token is invalid.
+    InvalidToken,
     /// Indicates that an unexpected error occurred.
     UnexpectedError,
 }

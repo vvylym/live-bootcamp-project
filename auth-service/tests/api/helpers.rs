@@ -1,14 +1,16 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use auth_service::{Application, api::AppState, services::hashmap_user_store::HashmapUserStore};
-use reqwest::Client;
+use auth_service::{Application, api::{AppState, utils::constants::test}, services::hashmap_user_store::HashmapUserStore};
+use reqwest::{Client, cookie::Jar};
 use uuid::Uuid;
 
 /// A helper struct to spawn and interact with a test instance of our application.
 pub struct TestApp {
     /// The address of the running instance of our application.
     pub address: String,
+    /// The cookie jar to store cookies.
+    pub cookie_jar: Arc<Jar>,
     /// The HTTP client to interact with the application.
     pub http_client: Client,
 }
@@ -19,7 +21,7 @@ impl TestApp {
         let user_store = Arc::new(RwLock::new(HashmapUserStore::default()));
         let app_state = AppState::new(user_store);
 
-        let app = Application::build(app_state, "127.0.0.1:0")
+        let app = Application::build(app_state, test::APP_ADDRESS)
             .await
             .expect("Failed to build app");
 
@@ -30,12 +32,18 @@ impl TestApp {
         #[allow(clippy::let_underscore_future)]
         let _ = tokio::spawn(app.run());
 
+        let cookie_jar = Arc::new(Jar::default());
+
         // Create a Reqwest http client instance
-        let http_client = Client::builder().build().unwrap();
+        let http_client = Client::builder()
+            .cookie_provider(cookie_jar.clone())
+            .build()
+            .unwrap();
 
         // Create new `TestApp` instance and return it
         Self {
             address,
+            cookie_jar,
             http_client,
         }
     }
