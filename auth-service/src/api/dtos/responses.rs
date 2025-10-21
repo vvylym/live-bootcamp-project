@@ -48,7 +48,9 @@ impl IntoResponse for AuthAPIError {
             AuthAPIError::InvalidEmail => (StatusCode::BAD_REQUEST, "Invalid email address"),
             AuthAPIError::UserAlreadyExists => (StatusCode::CONFLICT, "User already exists"),
             AuthAPIError::InvalidCredentials => (StatusCode::BAD_REQUEST, "Invalid credentials"),
-            AuthAPIError::IncorrectCredentials => (StatusCode::UNAUTHORIZED, "Incorrect credentials"),
+            AuthAPIError::IncorrectCredentials => {
+                (StatusCode::UNAUTHORIZED, "Incorrect credentials")
+            }
             AuthAPIError::MissingToken => (StatusCode::BAD_REQUEST, "Missing token"),
             AuthAPIError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token"),
             AuthAPIError::UnexpectedError => {

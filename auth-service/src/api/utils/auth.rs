@@ -1,6 +1,6 @@
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use chrono::Utc;
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::models::Email;
@@ -13,15 +13,13 @@ pub fn generate_auth_cookie(email: &Email) -> Result<Cookie<'static>, GenerateTo
     Ok(create_auth_cookie(token))
 }
 
-// Create cookie and set the value to the passed-in token string 
+// Create cookie and set the value to the passed-in token string
 fn create_auth_cookie(token: String) -> Cookie<'static> {
-    let cookie = Cookie::build((JWT_COOKIE_NAME, token))
+    Cookie::build((JWT_COOKIE_NAME, token))
         .path("/") // apply cookie to all URLs on the server
         .http_only(true) // prevent JavaScript from accessing the cookie
         .same_site(SameSite::Lax) // send cookie with "same-site" requests, and with "cross-site" top-level navigations.
-        .build();
-
-    cookie
+        .build()
 }
 
 #[derive(Debug)]

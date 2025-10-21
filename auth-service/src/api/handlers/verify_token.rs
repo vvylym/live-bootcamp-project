@@ -1,6 +1,12 @@
 use axum::{Json, http::StatusCode, response::IntoResponse};
 
-use crate::api::dtos::{ErrorResponse, VerifyTokenRequest};
+use crate::{
+    api::{
+        dtos::{ErrorResponse, VerifyTokenRequest},
+        utils::auth::validate_token,
+    },
+    domain::error::AuthAPIError,
+};
 
 #[utoipa::path(
     post,
@@ -15,6 +21,14 @@ use crate::api::dtos::{ErrorResponse, VerifyTokenRequest};
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
-pub async fn handle_verify_token(Json(_input): Json<VerifyTokenRequest>) -> impl IntoResponse {
-    StatusCode::OK.into_response()
+pub async fn handle_verify_token(
+    Json(request): Json<VerifyTokenRequest>,
+) -> Result<impl IntoResponse, AuthAPIError> {
+    let token = request.token.to_owned();
+
+    validate_token(&token)
+        .await
+        .map_err(|_| AuthAPIError::InvalidToken)?;
+
+    Ok(StatusCode::OK.into_response())
 }

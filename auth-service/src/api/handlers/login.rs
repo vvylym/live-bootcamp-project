@@ -1,7 +1,18 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::CookieJar;
 
-use crate::{api::{dtos::{ErrorResponse, LoginRequest, MFARequiredResponse}, utils::auth::generate_auth_cookie}, domain::{error::AuthAPIError, models::{Email, Password}, ports::UserStore}, AppState};
+use crate::{
+    AppState,
+    api::{
+        dtos::{ErrorResponse, LoginRequest, MFARequiredResponse},
+        utils::auth::generate_auth_cookie,
+    },
+    domain::{
+        error::AuthAPIError,
+        models::{Email, Password},
+        ports::UserStore,
+    },
+};
 
 #[utoipa::path(
     post,
@@ -25,21 +36,19 @@ pub async fn handle_login<S: UserStore>(
     jar: CookieJar,
     Json(request): Json<LoginRequest>,
 ) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
-    
-    let email = Email::parse(&request.email)
-        .map_err(|_| AuthAPIError::InvalidCredentials)?;
-    let password = Password::parse(&request.password)
-        .map_err(|_| AuthAPIError::InvalidCredentials)?;
+    let email = Email::parse(&request.email).map_err(|_| AuthAPIError::InvalidCredentials)?;
+    let password =
+        Password::parse(&request.password).map_err(|_| AuthAPIError::InvalidCredentials)?;
 
     let user_store = state.user_store.write().await;
 
-    user_store.validate_user(&email, &password)
+    user_store
+        .validate_user(&email, &password)
         .await
         .map_err(|_| AuthAPIError::IncorrectCredentials)?;
 
-    let auth_cookie = generate_auth_cookie(&email)
-        .map_err(|_| AuthAPIError::UnexpectedError)?;
-    
+    let auth_cookie = generate_auth_cookie(&email).map_err(|_| AuthAPIError::UnexpectedError)?;
+
     let updated_jar = jar.add(auth_cookie);
 
     Ok((updated_jar, (StatusCode::OK.into_response())))

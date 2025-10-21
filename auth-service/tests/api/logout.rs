@@ -28,11 +28,10 @@ async fn should_return_200_if_valid_jwt_cookie() {
     let response = app.post_login(&login_body).await;
 
     assert_eq!(response.status().as_u16(), 200);
-    
+
     let response = app.post_logout().await;
 
     assert_eq!(response.status().as_u16(), 200);
-
 }
 
 #[tokio::test]
@@ -58,7 +57,7 @@ async fn should_return_400_if_logout_called_twice_in_a_row() {
     let response = app.post_login(&login_body).await;
 
     assert_eq!(response.status().as_u16(), 200);
-    
+
     let response = app.post_logout().await;
 
     assert_eq!(response.status().as_u16(), 200);

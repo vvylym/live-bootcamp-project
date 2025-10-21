@@ -1,7 +1,11 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use auth_service::{Application, api::{AppState, utils::constants::test}, services::hashmap_user_store::HashmapUserStore};
+use auth_service::{
+    Application,
+    api::{AppState, utils::constants::test},
+    services::hashmap_user_store::HashmapUserStore,
+};
 use reqwest::{Client, cookie::Jar};
 use uuid::Uuid;
 

@@ -1,6 +1,12 @@
-use crate::{api::{dtos::ErrorResponse, utils::{auth::validate_token, constants::JWT_COOKIE_NAME}}, domain::error::AuthAPIError};
+use crate::{
+    api::{
+        dtos::ErrorResponse,
+        utils::{auth::validate_token, constants::JWT_COOKIE_NAME},
+    },
+    domain::error::AuthAPIError,
+};
 use axum::{http::StatusCode, response::IntoResponse};
-use axum_extra::extract::{cookie::Cookie, CookieJar};
+use axum_extra::extract::{CookieJar, cookie::Cookie};
 
 #[utoipa::path(
     post,
@@ -16,8 +22,7 @@ use axum_extra::extract::{cookie::Cookie, CookieJar};
     )
 )]
 pub async fn handle_logout(jar: CookieJar) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
-    let cookie = jar.get(JWT_COOKIE_NAME)
-        .ok_or(AuthAPIError::MissingToken)?;
+    let cookie = jar.get(JWT_COOKIE_NAME).ok_or(AuthAPIError::MissingToken)?;
 
     let token = cookie.value().to_owned();
 
@@ -25,7 +30,9 @@ pub async fn handle_logout(jar: CookieJar) -> Result<(CookieJar, impl IntoRespon
         .await
         .map_err(|_| AuthAPIError::InvalidToken)?;
 
-    let jar = jar.clone().remove(Cookie::new(JWT_COOKIE_NAME, cookie.value().to_owned()));
+    let jar = jar
+        .clone()
+        .remove(Cookie::new(JWT_COOKIE_NAME, cookie.value().to_owned()));
 
     Ok((jar, StatusCode::OK.into_response()))
 }

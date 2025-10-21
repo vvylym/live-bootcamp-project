@@ -1,8 +1,8 @@
 use axum::{
     Json, Router,
+    http::Method,
     response::Html,
     routing::{get, post},
-    http::Method,
 };
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use utoipa::OpenApi;
@@ -58,12 +58,11 @@ use super::handlers::*;
 struct ApiDoc;
 
 pub fn api_routes<S: UserStore>(app_state: AppState<S>) -> Router {
-
     let allowed_origins = [
-            "http://localhost:8000".parse().unwrap(),
-            // TODO: Replace [YOUR_DROPLET_IP] with your Droplet IP address
-            "http://[YOUR_DROPLET_IP]:8000".parse().unwrap(),
-        ];
+        "http://localhost:8000".parse().unwrap(),
+        // TODO: Replace [YOUR_DROPLET_IP] with your Droplet IP address
+        "http://[YOUR_DROPLET_IP]:8000".parse().unwrap(),
+    ];
 
     let cors = CorsLayer::new()
         // Allow GET and POST requests
@@ -71,7 +70,7 @@ pub fn api_routes<S: UserStore>(app_state: AppState<S>) -> Router {
         // Allow cookies to be included in requests
         .allow_credentials(true)
         .allow_origin(allowed_origins);
-    
+
     Router::new()
         .route("/", get(handle_root))
         .route("/login", post(handle_login))

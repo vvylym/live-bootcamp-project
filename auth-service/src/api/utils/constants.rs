@@ -7,7 +7,6 @@ lazy_static! {
     pub static ref JWT_SECRET: String = set_token();
 }
 
-
 fn set_token() -> String {
     dotenv().ok(); // Load environment variables
     let secret = std_env::var(env::JWT_SECRET_ENV_VAR).expect("JWT_SECRET must be set.");
@@ -24,7 +23,6 @@ pub mod env {
 pub const JWT_COOKIE_NAME: &str = "jwt";
 // This value determines how long the JWT auth token is valid for
 pub const TOKEN_TTL_SECONDS: i64 = 600; // 10 minutes
-
 
 pub mod prod {
     pub const APP_ADDRESS: &str = "0.0.0.0:3000";

@@ -36,7 +36,6 @@ async fn should_return_422_if_malformed_input() {
     }
 }
 
-
 #[tokio::test]
 async fn should_return_400_if_invalid_input() {
     let app = TestApp::new().await;
@@ -84,7 +83,7 @@ async fn should_return_400_if_invalid_input() {
 #[tokio::test]
 async fn should_return_401_if_incorrect_credentials() {
     // Call the log-in route with incorrect credentials and assert
-    // that a 401 HTTP status code is returned along with the appropriate error message.     
+    // that a 401 HTTP status code is returned along with the appropriate error message.
     let app = TestApp::new().await;
 
     let random_email = get_random_email();
