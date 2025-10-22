@@ -41,6 +41,56 @@ async fn should_return_200_valid_token() {
 }
 
 #[tokio::test]
+async fn should_return_401_if_banned_token() {
+    let app = TestApp::new().await;
+
+    let random_email = get_random_email();
+    let password = "password123";
+
+    let signup_body = serde_json::json!({
+        "email": random_email,
+        "password": password,
+        "requires2FA": false
+    });
+
+    let _ = app.post_signup(&signup_body).await;
+
+    let login_body = serde_json::json!({
+        "email": random_email,
+        "password": password,
+    });
+
+    let response = app.post_login(&login_body).await;
+
+    let token = response
+        .cookies()
+        .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
+        .unwrap()
+        .value()
+        .to_string();
+
+    let verify_token_body = serde_json::json!({
+        "token": token,
+    });
+
+    let _ = app.post_logout().await;
+
+    let response = app.post_verify_token(&verify_token_body).await;
+
+    assert_eq!(response.status().as_u16(), 401);
+
+    assert_eq!(
+        response
+            .json::<ErrorResponse>()
+            .await
+            .expect("Could not deserialize response body to ErrorResponse")
+            .error,
+        "Invalid token"
+    );
+
+}
+
+#[tokio::test]
 async fn should_return_401_if_invalid_token() {
     let app = TestApp::new().await;
 

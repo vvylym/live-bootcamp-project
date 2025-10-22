@@ -17,6 +17,15 @@ pub trait UserStore: Send + Sync + Clone + 'static {
     ) -> impl Future<Output = Result<(), UserStoreError>> + Send;
 }
 
+/// A trait for a banned store.
+pub trait BannedStore: Send + Sync + Clone + 'static {
+    /// Checks if an email is banned.
+    fn is_banned(&self, token: &str) -> impl Future<Output = Result<bool, BannedStoreError>> + Send;
+
+    /// Adds a token to the banned store.
+    fn add_token(&mut self, token: &str) -> impl Future<Output = Result<(), BannedStoreError>> + Send;
+} 
+
 /// An error that can occur when interacting with the user store.
 #[derive(Debug, PartialEq)]
 pub enum UserStoreError {
@@ -26,6 +35,13 @@ pub enum UserStoreError {
     UserNotFound,
     /// Indicates that the provided credentials are invalid.
     InvalidCredentials,
+    /// Indicates that an unexpected error occurred.
+    UnexpectedError,
+}
+
+/// An error that can occur when interacting with the banned store.
+#[derive(Debug, PartialEq)]
+pub enum BannedStoreError {
     /// Indicates that an unexpected error occurred.
     UnexpectedError,
 }

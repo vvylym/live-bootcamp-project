@@ -4,7 +4,7 @@ use tokio::sync::RwLock;
 use auth_service::{
     Application,
     api::{AppState, utils::constants::test},
-    services::hashmap_user_store::HashmapUserStore,
+    services::{hashmap_user_store::HashmapUserStore, banned_user_store::HashSetBannedStore},
 };
 use reqwest::{Client, cookie::Jar};
 use uuid::Uuid;
@@ -23,7 +23,9 @@ impl TestApp {
     /// Spawns a new instance of our application and returns a `TestApp` instance.
     pub async fn new() -> Self {
         let user_store = Arc::new(RwLock::new(HashmapUserStore::default()));
-        let app_state = AppState::new(user_store);
+        let banned_store = Arc::new(RwLock::new(HashSetBannedStore::default()));
+
+        let app_state = AppState::new(user_store, banned_store);
 
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await

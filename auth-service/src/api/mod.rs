@@ -9,22 +9,26 @@ use axum::{Router, serve::Serve};
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::RwLock};
 
-use crate::{domain::ports::UserStore, services::hashmap_user_store::HashmapUserStore};
+use crate::{domain::ports::{BannedStore, UserStore}, services::{banned_user_store::HashSetBannedStore, hashmap_user_store::HashmapUserStore}};
 
 // Using a type alias to improve readability!
 pub type UserStoreType = Arc<RwLock<HashmapUserStore>>;
 
+pub type BannedStoreType = Arc<RwLock<HashSetBannedStore>>;
+
 #[derive(Clone)]
-pub struct AppState<S: UserStore> {
+pub struct AppState<S: UserStore, B: BannedStore> {
     pub user_store: Arc<RwLock<S>>,
+    pub banned_store: Arc<RwLock<B>>,
 }
 
-impl<S> AppState<S>
+impl<S, B> AppState<S, B>
 where
     S: UserStore,
+    B: BannedStore,
 {
-    pub fn new(user_store: Arc<RwLock<S>>) -> Self {
-        Self { user_store }
+    pub fn new(user_store: Arc<RwLock<S>>, banned_store: Arc<RwLock<B>>) -> Self {
+        Self { user_store, banned_store }
     }
 }
 
@@ -39,8 +43,8 @@ pub struct Application {
 
 impl Application {
     /// Builds a new instance of the `Application`.
-    pub async fn build<S: UserStore>(
-        app_state: AppState<S>,
+    pub async fn build<S: UserStore, B: BannedStore>(
+        app_state: AppState<S, B>,
         address: &str,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         // Move the Router definition from `main.rs` to here.

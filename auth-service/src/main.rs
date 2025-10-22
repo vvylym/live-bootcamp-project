@@ -1,9 +1,10 @@
-use auth_service::{AppState, Application, UserStoreType, prod};
+use auth_service::{AppState, Application, UserStoreType, BannedStoreType, prod};
 
 #[tokio::main]
 async fn main() {
     let user_store = UserStoreType::default();
-    let app_state = AppState::new(user_store);
+    let banned_store = BannedStoreType::default();
+    let app_state = AppState::new(user_store, banned_store);
 
     let app = Application::build(app_state, prod::APP_ADDRESS)
         .await

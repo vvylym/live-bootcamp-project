@@ -3,9 +3,9 @@ use crate::{
         dtos::ErrorResponse,
         utils::{auth::validate_token, constants::JWT_COOKIE_NAME},
     },
-    domain::error::AuthAPIError,
+    domain::{error::AuthAPIError, ports::{BannedStore, UserStore}}, AppState,
 };
-use axum::{http::StatusCode, response::IntoResponse};
+use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::{CookieJar, cookie::Cookie};
 
 #[utoipa::path(
@@ -21,14 +21,32 @@ use axum_extra::extract::{CookieJar, cookie::Cookie};
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
-pub async fn handle_logout(jar: CookieJar) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
+pub async fn handle_logout<S: UserStore, B: BannedStore>(
+    State(state): State<AppState<S, B>>,
+    jar: CookieJar
+) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
     let cookie = jar.get(JWT_COOKIE_NAME).ok_or(AuthAPIError::MissingToken)?;
 
     let token = cookie.value().to_owned();
 
-    validate_token(&token)
-        .await
-        .map_err(|_| AuthAPIError::InvalidToken)?;
+    let mut banned_store = state.banned_store.write().await;
+
+    match banned_store.is_banned(&token).await {
+        Ok(is_banned) => {
+            if is_banned {
+                return Err(AuthAPIError::InvalidToken);
+            } else {
+                validate_token(&token)
+                    .await
+                    .map_err(|_| AuthAPIError::InvalidToken)?;
+
+                banned_store.add_token(&token)
+                    .await
+                    .map_err(|_| AuthAPIError::UnexpectedError)?;
+            }
+        }
+        Err(_) => return Err(AuthAPIError::UnexpectedError),
+    }
 
     let jar = jar
         .clone()

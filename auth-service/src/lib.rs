@@ -10,6 +10,6 @@ pub mod domain;
 pub mod services;
 
 pub use api::{
-    AppState, Application, UserStoreType,
+    AppState, Application, UserStoreType, BannedStoreType,
     utils::constants::{prod, test},
 };

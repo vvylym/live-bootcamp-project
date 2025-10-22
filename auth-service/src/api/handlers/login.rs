@@ -10,7 +10,7 @@ use crate::{
     domain::{
         error::AuthAPIError,
         models::{Email, Password},
-        ports::UserStore,
+        ports::{BannedStore, UserStore},
     },
 };
 
@@ -31,8 +31,8 @@ use crate::{
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
-pub async fn handle_login<S: UserStore>(
-    State(state): State<AppState<S>>,
+pub async fn handle_login<S: UserStore, B: BannedStore>(
+    State(state): State<AppState<S, B>>,
     jar: CookieJar,
     Json(request): Json<LoginRequest>,
 ) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
