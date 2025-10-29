@@ -1,4 +1,4 @@
-use auth_service::api::{dtos::ErrorResponse, utils::constants::JWT_COOKIE_NAME};
+use auth_service::{api::{dtos::{ErrorResponse, MFARequiredResponse}, utils::constants::JWT_COOKIE_NAME}, domain::{models::Email, ports::TwoFACodeStore}};
 
 use super::helpers::*;
 
@@ -138,4 +138,48 @@ async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
         .expect("No auth cookie found");
 
     assert!(!auth_cookie.value().is_empty());
+}
+
+
+#[tokio::test]
+async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
+    let app = TestApp::new().await;
+
+    let random_email = get_random_email();
+
+    let signup_body = serde_json::json!({
+        "email": random_email,
+        "password": "password123",
+        "requires2FA": true
+    });
+
+    let response = app.post_signup(&signup_body).await;
+
+    assert_eq!(response.status().as_u16(), 201);
+
+    let login_body = serde_json::json!({
+        "email": random_email,
+        "password": "password123",
+    });
+
+    let response = app.post_login(&login_body).await;
+
+    assert_eq!(response.status().as_u16(), 206);
+
+    let json_body = response
+        .json::<MFARequiredResponse>()
+        .await
+        .expect("Could not deserialize response body to TwoFactorAuthResponse");
+
+    assert_eq!(json_body.message, "2FA required".to_owned());
+
+    // TODO: assert that `json_body.login_attempt_id` is stored inside `app.two_fa_code_store`
+    let (stored_login_attempt_id, _) = app
+        .two_fa_code_store
+        .read()
+        .await
+        .get_code(&Email::parse(&random_email).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(stored_login_attempt_id.as_ref(), json_body.login_attempt_id);
 }

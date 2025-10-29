@@ -1,11 +1,10 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 
 use crate::{
-    api::{
+    AppState, api::{
         dtos::{ErrorResponse, VerifyTokenRequest},
         utils::auth::validate_token,
-    },
-    domain::{error::AuthAPIError, ports::{BannedStore, UserStore}}, AppState,
+    }, domain::{error::AuthAPIError, ports::{BannedStore, TwoFACodeStore, UserStore}}
 };
 
 #[utoipa::path(
@@ -21,8 +20,8 @@ use crate::{
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
-pub async fn handle_verify_token<S: UserStore, B: BannedStore>(
-    State(state): State<AppState<S, B>>,
+pub async fn handle_verify_token<S: UserStore, B: BannedStore, T: TwoFACodeStore>(
+    State(state): State<AppState<S, B, T>>,
     Json(request): Json<VerifyTokenRequest>,
 ) -> Result<impl IntoResponse, AuthAPIError> {
     let token = request.token.to_owned();

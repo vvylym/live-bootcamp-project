@@ -1,9 +1,8 @@
 use crate::{
-    api::{
+    AppState, api::{
         dtos::ErrorResponse,
         utils::{auth::validate_token, constants::JWT_COOKIE_NAME},
-    },
-    domain::{error::AuthAPIError, ports::{BannedStore, UserStore}}, AppState,
+    }, domain::{error::AuthAPIError, ports::{BannedStore, TwoFACodeStore, UserStore}}
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::{CookieJar, cookie::Cookie};
@@ -12,7 +11,6 @@ use axum_extra::extract::{CookieJar, cookie::Cookie};
     post,
     path = "/logout",
     description = "Logout user",
-    // TODO: Add parameters in cookie with schema string, required with the name jwt
     tag = "auth",
     responses(
         (status = 200, description = "Logout successful", headers(("x-set-cookie" = String, description = "jwt=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax; Secure; Path=/")),),
@@ -21,8 +19,8 @@ use axum_extra::extract::{CookieJar, cookie::Cookie};
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
-pub async fn handle_logout<S: UserStore, B: BannedStore>(
-    State(state): State<AppState<S, B>>,
+pub async fn handle_logout<S: UserStore, B: BannedStore, T: TwoFACodeStore>(
+    State(state): State<AppState<S, B, T>>,
     jar: CookieJar
 ) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
     let cookie = jar.get(JWT_COOKIE_NAME).ok_or(AuthAPIError::MissingToken)?;

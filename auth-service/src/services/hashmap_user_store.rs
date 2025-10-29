@@ -4,9 +4,7 @@ use crate::domain::{
 };
 use std::collections::HashMap;
 
-// TODO: Create a new struct called `HashmapUserStore` containing a `users` field
-// which stores a `HashMap`` of email `String`s mapped to `User` objects.
-// Derive the `Default` trait for `HashmapUserStore`.
+
 #[derive(Default, Clone)]
 pub struct HashmapUserStore {
     /// A hashmap to store users by their email.
@@ -24,11 +22,6 @@ impl UserStore for HashmapUserStore {
         Ok(())
     }
 
-    // TODO: Implement a public method called `get_user`, which takes an
-    // immutable reference to self and an email string slice as arguments.
-    /// This function should return a `Result` type containing either a
-    /// `User` object or a `UserStoreError`.
-    /// Return `UserStoreError::UserNotFound` if the user can not be found.
     async fn get_user(&self, email: &Email) -> Result<User, UserStoreError> {
         match self.users.get(email.as_ref()) {
             Some(value) => Ok(value.clone()),
@@ -55,7 +48,6 @@ impl UserStore for HashmapUserStore {
     }
 }
 
-// TODO: Add unit tests for your `HashmapUserStore` implementation
 #[cfg(test)]
 mod tests {
     use super::*;

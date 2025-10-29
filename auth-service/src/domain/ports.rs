@@ -1,4 +1,4 @@
-use super::models::{Email, Password, User};
+use super::models::*;
 use std::future::Future;
 
 /// A trait for a user store.
@@ -43,5 +43,26 @@ pub enum UserStoreError {
 #[derive(Debug, PartialEq)]
 pub enum BannedStoreError {
     /// Indicates that an unexpected error occurred.
+    UnexpectedError,
+}
+
+// This trait represents the interface all concrete 2FA code stores should implement
+pub trait TwoFACodeStore: Send + Sync + Clone + 'static {
+    fn add_code(
+        &mut self,
+        email: Email,
+        login_attempt_id: LoginAttemptId,
+        code: TwoFACode,
+    ) -> impl Future<Output = Result<(), TwoFACodeStoreError>> + Send;
+    fn remove_code(&mut self, email: &Email) -> impl Future<Output = Result<(), TwoFACodeStoreError>> + Send;
+    fn get_code(
+        &self,
+        email: &Email,
+    ) -> impl Future<Output = Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError>> + Send;
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TwoFACodeStoreError {
+    LoginAttemptIdNotFound,
     UnexpectedError,
 }

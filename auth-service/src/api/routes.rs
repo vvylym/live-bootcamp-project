@@ -8,7 +8,7 @@ use tower_http::{cors::CorsLayer, services::ServeDir};
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
-use crate::{api::AppState, domain::ports::{BannedStore, UserStore}};
+use crate::{api::AppState, domain::ports::{BannedStore, TwoFACodeStore, UserStore}};
 
 use super::handlers::*;
 
@@ -57,7 +57,7 @@ use super::handlers::*;
 )]
 struct ApiDoc;
 
-pub fn api_routes<S: UserStore, B: BannedStore>(app_state: AppState<S, B>) -> Router {
+pub fn api_routes<S: UserStore, B: BannedStore, T: TwoFACodeStore>(app_state: AppState<S, B, T>) -> Router {
     let allowed_origins = [
         "http://localhost:8000".parse().unwrap(),
         // TODO: Replace [YOUR_DROPLET_IP] with your Droplet IP address

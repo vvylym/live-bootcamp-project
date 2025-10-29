@@ -18,7 +18,7 @@ pub struct SignUpResponse {
 }
 
 /// Defines the response model for successful login requiring 2FA.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[schema(example = json!({
     "message": "MFA required.",
     "loginAttemptId": "123e4567-e89b-12d3-a456-426614174000"
