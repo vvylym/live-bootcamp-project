@@ -9,30 +9,35 @@ use axum::{Router, serve::Serve};
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::RwLock};
 
-use crate::{domain::ports::{BannedStore, TwoFACodeStore, UserStore}, services::{banned_user_store::HashSetBannedStore, hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore}};
-
-// Using a type alias to improve readability!
-pub type UserStoreType = Arc<RwLock<HashmapUserStore>>;
-
-pub type BannedStoreType = Arc<RwLock<HashSetBannedStore>>;
-
-pub type TwoFACodeStoreType = Arc<RwLock<HashmapTwoFACodeStore>>;
+use crate::domain::ports::{BannedStore, EmailClient, TwoFACodeStore, UserStore};
 
 #[derive(Clone)]
-pub struct AppState<S: UserStore, B: BannedStore, T: TwoFACodeStore> {
+pub struct AppState<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailClient> {
     pub user_store: Arc<RwLock<S>>,
     pub banned_store: Arc<RwLock<B>>,
     pub two_fa_store: Arc<RwLock<T>>,
+    pub email_client: Arc<RwLock<E>>,
 }
 
-impl<S, B, T> AppState<S, B, T>
+impl<S, B, T, E> AppState<S, B, T, E>
 where
     S: UserStore,
     B: BannedStore,
     T: TwoFACodeStore,
+    E: EmailClient,
 {
-    pub fn new(user_store: Arc<RwLock<S>>, banned_store: Arc<RwLock<B>>, two_fa_store: Arc<RwLock<T>>) -> Self {
-        Self { user_store, banned_store, two_fa_store }
+    pub fn new(
+        user_store: Arc<RwLock<S>>,
+        banned_store: Arc<RwLock<B>>,
+        two_fa_store: Arc<RwLock<T>>,
+        email_client: Arc<RwLock<E>>,
+    ) -> Self {
+        Self {
+            user_store,
+            banned_store,
+            two_fa_store,
+            email_client,
+        }
     }
 }
 
@@ -47,8 +52,8 @@ pub struct Application {
 
 impl Application {
     /// Builds a new instance of the `Application`.
-    pub async fn build<S: UserStore, B: BannedStore, T: TwoFACodeStore>(
-        app_state: AppState<S, B, T>,
+    pub async fn build<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailClient>(
+        app_state: AppState<S, B, T, E>,
         address: &str,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         // Move the Router definition from `main.rs` to here.

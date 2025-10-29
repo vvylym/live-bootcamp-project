@@ -1,8 +1,13 @@
 use crate::{
-    AppState, api::{
+    AppState,
+    api::{
         dtos::ErrorResponse,
         utils::{auth::validate_token, constants::JWT_COOKIE_NAME},
-    }, domain::{error::AuthAPIError, ports::{BannedStore, TwoFACodeStore, UserStore}}
+    },
+    domain::{
+        error::AuthAPIError,
+        ports::{BannedStore, EmailClient, TwoFACodeStore, UserStore},
+    },
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::{CookieJar, cookie::Cookie};
@@ -19,9 +24,9 @@ use axum_extra::extract::{CookieJar, cookie::Cookie};
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
-pub async fn handle_logout<S: UserStore, B: BannedStore, T: TwoFACodeStore>(
-    State(state): State<AppState<S, B, T>>,
-    jar: CookieJar
+pub async fn handle_logout<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailClient>(
+    State(state): State<AppState<S, B, T, E>>,
+    jar: CookieJar,
 ) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
     let cookie = jar.get(JWT_COOKIE_NAME).ok_or(AuthAPIError::MissingToken)?;
 
@@ -38,7 +43,8 @@ pub async fn handle_logout<S: UserStore, B: BannedStore, T: TwoFACodeStore>(
                     .await
                     .map_err(|_| AuthAPIError::InvalidToken)?;
 
-                banned_store.add_token(&token)
+                banned_store
+                    .add_token(&token)
                     .await
                     .map_err(|_| AuthAPIError::UnexpectedError)?;
             }

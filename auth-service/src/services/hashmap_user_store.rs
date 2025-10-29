@@ -4,7 +4,6 @@ use crate::domain::{
 };
 use std::collections::HashMap;
 
-
 #[derive(Default, Clone)]
 pub struct HashmapUserStore {
     /// A hashmap to store users by their email.

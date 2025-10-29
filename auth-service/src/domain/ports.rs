@@ -20,11 +20,15 @@ pub trait UserStore: Send + Sync + Clone + 'static {
 /// A trait for a banned store.
 pub trait BannedStore: Send + Sync + Clone + 'static {
     /// Checks if an email is banned.
-    fn is_banned(&self, token: &str) -> impl Future<Output = Result<bool, BannedStoreError>> + Send;
+    fn is_banned(&self, token: &str)
+    -> impl Future<Output = Result<bool, BannedStoreError>> + Send;
 
     /// Adds a token to the banned store.
-    fn add_token(&mut self, token: &str) -> impl Future<Output = Result<(), BannedStoreError>> + Send;
-} 
+    fn add_token(
+        &mut self,
+        token: &str,
+    ) -> impl Future<Output = Result<(), BannedStoreError>> + Send;
+}
 
 /// An error that can occur when interacting with the user store.
 #[derive(Debug, PartialEq)]
@@ -54,7 +58,10 @@ pub trait TwoFACodeStore: Send + Sync + Clone + 'static {
         login_attempt_id: LoginAttemptId,
         code: TwoFACode,
     ) -> impl Future<Output = Result<(), TwoFACodeStoreError>> + Send;
-    fn remove_code(&mut self, email: &Email) -> impl Future<Output = Result<(), TwoFACodeStoreError>> + Send;
+    fn remove_code(
+        &mut self,
+        email: &Email,
+    ) -> impl Future<Output = Result<(), TwoFACodeStoreError>> + Send;
     fn get_code(
         &self,
         email: &Email,
@@ -65,4 +72,14 @@ pub trait TwoFACodeStore: Send + Sync + Clone + 'static {
 pub enum TwoFACodeStoreError {
     LoginAttemptIdNotFound,
     UnexpectedError,
+}
+
+///
+pub trait EmailClient: Send + Sync + Clone + 'static {
+    fn send_email(
+        &self,
+        recipient: &Email,
+        subject: &str,
+        content: &str,
+    ) -> impl Future<Output = Result<(), String>> + Send;
 }

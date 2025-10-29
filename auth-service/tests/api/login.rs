@@ -1,4 +1,10 @@
-use auth_service::{api::{dtos::{ErrorResponse, MFARequiredResponse}, utils::constants::JWT_COOKIE_NAME}, domain::{models::Email, ports::TwoFACodeStore}};
+use auth_service::{
+    api::{
+        dtos::{ErrorResponse, MFARequiredResponse},
+        utils::constants::JWT_COOKIE_NAME,
+    },
+    domain::{models::Email, ports::TwoFACodeStore},
+};
 
 use super::helpers::*;
 
@@ -139,7 +145,6 @@ async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
 
     assert!(!auth_cookie.value().is_empty());
 }
-
 
 #[tokio::test]
 async fn should_return_206_if_valid_credentials_and_2fa_enabled() {

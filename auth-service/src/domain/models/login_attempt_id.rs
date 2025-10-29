@@ -8,7 +8,7 @@ impl LoginAttemptId {
         // Use the `parse_str` function from the `uuid` crate to ensure `id` is a valid UUID
         match Uuid::parse_str(&id) {
             Ok(value) => Ok(Self(value.to_string())),
-            Err(e) => Err(e.to_string())
+            Err(e) => Err(e.to_string()),
         }
     }
 }

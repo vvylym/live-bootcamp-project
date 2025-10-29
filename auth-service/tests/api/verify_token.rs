@@ -87,7 +87,6 @@ async fn should_return_401_if_banned_token() {
             .error,
         "Invalid token"
     );
-
 }
 
 #[tokio::test]

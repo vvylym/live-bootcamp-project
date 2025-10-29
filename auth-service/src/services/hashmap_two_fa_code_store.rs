@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::domain::{
-    ports::{TwoFACodeStore, TwoFACodeStoreError},
     models::{Email, LoginAttemptId, TwoFACode},
+    ports::{TwoFACodeStore, TwoFACodeStoreError},
 };
 
 #[derive(Default, Clone)]
@@ -13,11 +13,11 @@ pub struct HashmapTwoFACodeStore {
 // TODO: implement TwoFACodeStore for HashmapTwoFACodeStore
 impl TwoFACodeStore for HashmapTwoFACodeStore {
     async fn add_code(
-            &mut self,
-            email: Email,
-            login_attempt_id: LoginAttemptId,
-            code: TwoFACode,
-        ) -> Result<(), TwoFACodeStoreError> {
+        &mut self,
+        email: Email,
+        login_attempt_id: LoginAttemptId,
+        code: TwoFACode,
+    ) -> Result<(), TwoFACodeStoreError> {
         self.codes.insert(email, (login_attempt_id, code));
         Ok(())
     }
@@ -28,12 +28,14 @@ impl TwoFACodeStore for HashmapTwoFACodeStore {
     }
 
     async fn get_code(
-            &self,
-            email: &Email,
-        ) -> Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError> {
+        &self,
+        email: &Email,
+    ) -> Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError> {
         match self.codes.get(&email) {
-            Some((login_attempt_id, two_fa_code)) => Ok((login_attempt_id.to_owned(), two_fa_code.to_owned())),
-            _ => Err(TwoFACodeStoreError::UnexpectedError)
+            Some((login_attempt_id, two_fa_code)) => {
+                Ok((login_attempt_id.to_owned(), two_fa_code.to_owned()))
+            }
+            _ => Err(TwoFACodeStoreError::UnexpectedError),
         }
     }
 }
@@ -46,7 +48,7 @@ mod tests {
     async fn test_add_code() {
         let mut store = HashmapTwoFACodeStore::default();
         let add_to_store = store.add_code(
-            Email::parse("email@example.com").unwrap(), 
+            Email::parse("email@example.com").unwrap(),
             LoginAttemptId::default(),
             TwoFACode::default(),
         );
@@ -56,10 +58,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_code() {
         let valid_email = Email::parse("email@example.com").unwrap();
-        let invalid_email  = Email::parse("email2@example.com").unwrap();
+        let invalid_email = Email::parse("email2@example.com").unwrap();
         let mut store = HashmapTwoFACodeStore::default();
         let add_to_store = store.add_code(
-            valid_email.clone(), 
+            valid_email.clone(),
             LoginAttemptId::default(),
             TwoFACode::default(),
         );
@@ -75,15 +77,15 @@ mod tests {
     #[tokio::test]
     async fn test_remove_code() {
         let valid_email = Email::parse("email@example.com").unwrap();
-        let delete_email  = Email::parse("email2@example.com").unwrap();
+        let delete_email = Email::parse("email2@example.com").unwrap();
         let mut store = HashmapTwoFACodeStore::default();
         let _ = store.add_code(
-            valid_email.clone(), 
+            valid_email.clone(),
             LoginAttemptId::default(),
             TwoFACode::default(),
         );
         let _ = store.add_code(
-            delete_email.clone(), 
+            delete_email.clone(),
             LoginAttemptId::default(),
             TwoFACode::default(),
         );

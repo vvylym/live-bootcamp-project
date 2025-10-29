@@ -9,7 +9,21 @@ pub mod api;
 pub mod domain;
 pub mod services;
 
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use domain::ports::{BannedStore, UserStore, TwoFACodeStore, EmailClient};
+
 pub use api::{
-    AppState, Application, UserStoreType, BannedStoreType, TwoFACodeStoreType,
+    AppState, Application,
     utils::constants::{prod, test},
 };
+
+
+// Using a type alias to improve readability!
+pub type UserStoreType = Arc<RwLock<dyn UserStore>>;
+
+pub type BannedStoreType = Arc<RwLock<dyn BannedStore>>;
+
+pub type TwoFACodeStoreType = Arc<RwLock<dyn TwoFACodeStore>>;
+
+pub type EmailClientType = Arc<RwLock<dyn EmailClient>>;

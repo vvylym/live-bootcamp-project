@@ -8,10 +8,10 @@ impl TwoFACode {
         // Ensure `code` is a valid 6-digit code
         match is_valid_code(&code) {
             true => Ok(Self(code)),
-            _ => Err("Invalid 2FA code".to_owned())
+            _ => Err("Invalid 2FA code".to_owned()),
         }
     }
-} 
+}
 
 fn is_valid_code(code: &str) -> bool {
     // Check if the code is exactly 6 characters long.
@@ -54,7 +54,6 @@ impl AsRef<str> for TwoFACode {
         &self.0
     }
 }
-
 
 #[cfg(test)]
 mod tests {

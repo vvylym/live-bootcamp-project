@@ -1,6 +1,4 @@
-use crate::domain::{
-    ports::{BannedStore, BannedStoreError},
-};
+use crate::domain::ports::{BannedStore, BannedStoreError};
 use std::collections::HashSet;
 
 /// A store for banned tokens using a HashSet.
