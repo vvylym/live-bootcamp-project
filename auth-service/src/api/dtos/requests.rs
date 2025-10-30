@@ -40,15 +40,18 @@ pub struct LoginRequest {
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 #[schema(example = json!({
     "email": "email@example.com",
-    "mfa_code": "1234"
+    "loginAttemptId": "attempt-123-123",
+    "2FACode": "1234"
 }))]
 pub struct Verify2faRequest {
     /// The user's email address.]
     #[validate(email)]
     pub email: String,
+    #[serde(rename = "loginAttemptId")]
+    pub login_attempt_id: String,
     /// The user's password.
     #[serde(rename = "2FACode")]
-    #[validate(length(min = 4))]
+    #[validate(length(min = 6))]
     pub _2fa_code: String,
 }
 
