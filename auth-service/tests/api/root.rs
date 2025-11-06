@@ -16,4 +16,6 @@ async fn test_root() {
             .unwrap()
             .starts_with("text/html")
     );
+
+    let _ = app.clean_up().await;
 }
