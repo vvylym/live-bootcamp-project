@@ -1,3 +1,4 @@
+use redis::RedisResult;
 use sqlx::{
     Connection, Executor, PgConnection, PgPool,
     postgres::{PgConnectOptions, PgPoolOptions},
@@ -11,7 +12,7 @@ use auth_service::{
     Application,
     api::{
         AppState,
-        utils::constants::{DATABASE_URL, test},
+        utils::constants::{DATABASE_URL, REDIS_HOST_NAME, test},
     },
     get_postgres_pool,
     services::data_stores::*,
@@ -30,7 +31,7 @@ pub struct TestApp {
     /// The cookie jar to store cookies.
     pub cookie_jar: Arc<Jar>,
 
-    pub banned_token_store: Arc<RwLock<HashsetBannedTokenStore>>,
+    pub banned_token_store: Arc<RwLock<RedisBannedTokenStore>>,
 
     pub two_fa_code_store: Arc<RwLock<HashmapTwoFACodeStore>>,
     /// The HTTP client to interact with the application.
@@ -43,6 +44,7 @@ impl TestApp {
     /// Spawns a new instance of our application and returns a `TestApp` instance.
     pub async fn new() -> Self {
         let pg_pool = configure_postgresql().await;
+        let redis_connection = configure_redis();
         let db_name = pg_pool
             .connect_options()
             .get_database()
@@ -50,7 +52,10 @@ impl TestApp {
             .to_string();
         let user_store = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
 
-        let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::default()));
+        let banned_token_store = Arc::new(RwLock::new(RedisBannedTokenStore::new(Arc::new(
+            RwLock::new(redis_connection),
+        ))));
+
         let two_fa_code_store = Arc::new(RwLock::new(HashmapTwoFACodeStore::default()));
         let email_client = Arc::new(RwLock::new(MockEmailClient {}));
 
@@ -256,4 +261,16 @@ async fn delete_database(db_name: &str) {
         .execute(format!(r#"DROP DATABASE "{}";"#, db_name).as_str())
         .await
         .expect("Failed to drop the database.");
+}
+
+fn configure_redis() -> redis::Connection {
+    get_redis_client(REDIS_HOST_NAME.to_owned())
+        .expect("Failed to get Redis client")
+        .get_connection()
+        .expect("Failed to get Redis connection")
+}
+
+pub fn get_redis_client(redis_hostname: String) -> RedisResult<redis::Client> {
+    let redis_url = format!("redis://{}/", redis_hostname);
+    redis::Client::open(redis_url)
 }
