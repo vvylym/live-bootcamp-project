@@ -83,29 +83,41 @@ mod tests {
     async fn test_redis_banned_token_store() {
         // 1. Initialize Redis store
         let mut store = create_test_store();
-        
+
         // 2. Add a single token
         let token = "test_token_single";
         let result = store.add_token(token).await;
         assert!(result.is_ok(), "Failed to add token");
-        
+
         // 3. Verify that the added key exists
         let contains = store.contains_token(token).await;
         assert!(contains.is_ok(), "Failed to check if token exists");
         assert!(contains.unwrap(), "Token should exist after being added");
-        
+
         // 4. Verify that a non-existing key does not exist
         let non_existing_token = "non_existing_token";
         let non_existing = store.contains_token(non_existing_token).await;
-        assert!(non_existing.is_ok(), "Failed to check if non-existing token exists");
-        assert!(!non_existing.unwrap(), "Non-existing token should not exist");
-        
+        assert!(
+            non_existing.is_ok(),
+            "Failed to check if non-existing token exists"
+        );
+        assert!(
+            !non_existing.unwrap(),
+            "Non-existing token should not exist"
+        );
+
         // 5. Call flushall (reset_all)
         store.reset_all().await;
-        
+
         // 6. Verify that the single key added no longer exists
         let contains_after_flush = store.contains_token(token).await;
-        assert!(contains_after_flush.is_ok(), "Failed to check if token exists after flush");
-        assert!(!contains_after_flush.unwrap(), "Token should not exist after flushall");
+        assert!(
+            contains_after_flush.is_ok(),
+            "Failed to check if token exists after flush"
+        );
+        assert!(
+            !contains_after_flush.unwrap(),
+            "Token should not exist after flushall"
+        );
     }
 }

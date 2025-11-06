@@ -33,7 +33,7 @@ pub struct TestApp {
 
     pub banned_token_store: Arc<RwLock<RedisBannedTokenStore>>,
 
-    pub two_fa_code_store: Arc<RwLock<HashmapTwoFACodeStore>>,
+    pub two_fa_code_store: Arc<RwLock<RedisTwoFACodeStore>>,
     /// The HTTP client to interact with the application.
     pub http_client: Client,
 
@@ -44,7 +44,7 @@ impl TestApp {
     /// Spawns a new instance of our application and returns a `TestApp` instance.
     pub async fn new() -> Self {
         let pg_pool = configure_postgresql().await;
-        let redis_connection = configure_redis();
+        let redis_connection = Arc::new(RwLock::new(configure_redis()));
         let db_name = pg_pool
             .connect_options()
             .get_database()
@@ -52,11 +52,14 @@ impl TestApp {
             .to_string();
         let user_store = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
 
-        let banned_token_store = Arc::new(RwLock::new(RedisBannedTokenStore::new(Arc::new(
-            RwLock::new(redis_connection),
-        ))));
+        let banned_token_store = Arc::new(RwLock::new(RedisBannedTokenStore::new(
+            redis_connection.clone(),
+        )));
 
-        let two_fa_code_store = Arc::new(RwLock::new(HashmapTwoFACodeStore::default()));
+        let two_fa_code_store = Arc::new(RwLock::new(RedisTwoFACodeStore::new(
+            redis_connection.clone(),
+        )));
+
         let email_client = Arc::new(RwLock::new(MockEmailClient {}));
 
         let app_state = AppState::new(

@@ -10,14 +10,18 @@ use auth_service::services::data_stores::*;
 #[tokio::main]
 async fn main() {
     let pg_pool = configure_postgresql().await;
-    let redis_connection = configure_redis();
 
     let user_store = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
 
-    let banned_store = Arc::new(RwLock::new(RedisBannedTokenStore::new(Arc::new(
-        RwLock::new(redis_connection),
-    ))));
-    let two_fa_store = Arc::new(RwLock::new(HashmapTwoFACodeStore::default()));
+    let redis_connection = Arc::new(RwLock::new(configure_redis()));
+
+    let banned_store = Arc::new(RwLock::new(RedisBannedTokenStore::new(
+        redis_connection.clone(),
+    )));
+    let two_fa_store = Arc::new(RwLock::new(RedisTwoFACodeStore::new(
+        redis_connection.clone(),
+    )));
+
     let email_client = Arc::new(RwLock::new(MockEmailClient {}));
 
     let app_state = AppState::new(user_store, banned_store, two_fa_store, email_client);
