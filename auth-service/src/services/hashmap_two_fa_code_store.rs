@@ -10,7 +10,6 @@ pub struct HashmapTwoFACodeStore {
     codes: HashMap<Email, (LoginAttemptId, TwoFACode)>,
 }
 
-// TODO: implement TwoFACodeStore for HashmapTwoFACodeStore
 impl TwoFACodeStore for HashmapTwoFACodeStore {
     async fn add_code(
         &mut self,
@@ -23,19 +22,19 @@ impl TwoFACodeStore for HashmapTwoFACodeStore {
     }
 
     async fn remove_code(&mut self, email: &Email) -> Result<(), TwoFACodeStoreError> {
-        self.codes.remove(&email);
-        Ok(())
+        match self.codes.remove(email) {
+            Some(_) => Ok(()),
+            None => Err(TwoFACodeStoreError::LoginAttemptIdNotFound),
+        }
     }
 
     async fn get_code(
         &self,
         email: &Email,
     ) -> Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError> {
-        match self.codes.get(&email) {
-            Some((login_attempt_id, two_fa_code)) => {
-                Ok((login_attempt_id.to_owned(), two_fa_code.to_owned()))
-            }
-            _ => Err(TwoFACodeStoreError::UnexpectedError),
+        match self.codes.get(email) {
+            Some(value) => Ok(value.clone()),
+            None => Err(TwoFACodeStoreError::LoginAttemptIdNotFound),
         }
     }
 }
@@ -43,57 +42,65 @@ impl TwoFACodeStore for HashmapTwoFACodeStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[tokio::test]
     async fn test_add_code() {
         let mut store = HashmapTwoFACodeStore::default();
-        let add_to_store = store.add_code(
-            Email::parse("email@example.com").unwrap(),
-            LoginAttemptId::default(),
-            TwoFACode::default(),
-        );
-        assert!(add_to_store.await.is_ok());
-    }
+        let email = Email::parse("test@example.com").unwrap();
+        let login_attempt_id = LoginAttemptId::default();
+        let code = TwoFACode::default();
 
-    #[tokio::test]
-    async fn test_get_code() {
-        let valid_email = Email::parse("email@example.com").unwrap();
-        let invalid_email = Email::parse("email2@example.com").unwrap();
-        let mut store = HashmapTwoFACodeStore::default();
-        let add_to_store = store.add_code(
-            valid_email.clone(),
-            LoginAttemptId::default(),
-            TwoFACode::default(),
-        );
-        assert!(add_to_store.await.is_ok());
+        let result = store
+            .add_code(email.clone(), login_attempt_id.clone(), code.clone())
+            .await;
 
-        let valid_code = store.get_code(&valid_email).await;
-        assert!(valid_code.is_ok());
-
-        let invalid_code = store.get_code(&invalid_email).await;
-        assert!(invalid_code.is_err());
+        assert!(result.is_ok());
+        assert_eq!(store.codes.get(&email), Some(&(login_attempt_id, code)));
     }
 
     #[tokio::test]
     async fn test_remove_code() {
-        let valid_email = Email::parse("email@example.com").unwrap();
-        let delete_email = Email::parse("email2@example.com").unwrap();
         let mut store = HashmapTwoFACodeStore::default();
-        let _ = store.add_code(
-            valid_email.clone(),
-            LoginAttemptId::default(),
-            TwoFACode::default(),
-        );
-        let _ = store.add_code(
-            delete_email.clone(),
-            LoginAttemptId::default(),
-            TwoFACode::default(),
-        );
+        let email = Email::parse("test@example.com").unwrap();
+        let login_attempt_id = LoginAttemptId::default();
+        let code = TwoFACode::default();
 
-        let delete_code = store.remove_code(&delete_email).await;
-        assert!(delete_code.is_ok());
+        store
+            .codes
+            .insert(email.clone(), (login_attempt_id.clone(), code.clone()));
 
-        let deleted_code = store.get_code(&delete_email).await;
-        assert!(deleted_code.is_err());
+        let result = store.remove_code(&email).await;
+
+        assert!(result.is_ok());
+        assert_eq!(store.codes.get(&email), None);
+    }
+
+    #[tokio::test]
+    async fn test_get_code() {
+        let mut store = HashmapTwoFACodeStore::default();
+        let email = Email::parse("test@example.com").unwrap();
+        let login_attempt_id = LoginAttemptId::default();
+        let code = TwoFACode::default();
+        store
+            .codes
+            .insert(email.clone(), (login_attempt_id.clone(), code.clone()));
+
+        let result = store.get_code(&email).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), (login_attempt_id, code));
+    }
+
+    #[tokio::test]
+    async fn test_get_code_not_found() {
+        let store = HashmapTwoFACodeStore::default();
+        let email = Email::parse("test@example.com").unwrap();
+
+        let result = store.get_code(&email).await;
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            TwoFACodeStoreError::LoginAttemptIdNotFound
+        );
     }
 }

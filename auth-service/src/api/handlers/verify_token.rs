@@ -8,7 +8,7 @@ use crate::{
     },
     domain::{
         error::AuthAPIError,
-        ports::{BannedStore, EmailClient, TwoFACodeStore, UserStore},
+        ports::{BannedTokenStore, EmailClient, TwoFACodeStore, UserStore},
     },
 };
 
@@ -25,20 +25,17 @@ use crate::{
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
-pub async fn handle_verify_token<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailClient>(
+pub async fn handle_verify_token<
+    S: UserStore,
+    B: BannedTokenStore,
+    T: TwoFACodeStore,
+    E: EmailClient,
+>(
     State(state): State<AppState<S, B, T, E>>,
     Json(request): Json<VerifyTokenRequest>,
 ) -> Result<impl IntoResponse, AuthAPIError> {
-    let token = request.token.to_owned();
-
-    let banned_store = state.banned_store.read().await;
-    if banned_store.is_banned(&token).await.unwrap() {
-        return Err(AuthAPIError::InvalidToken);
+    match validate_token(&request.token, state.banned_token_store.clone()).await {
+        Ok(_) => Ok(StatusCode::OK),
+        Err(_) => Err(AuthAPIError::InvalidToken),
     }
-
-    validate_token(&token)
-        .await
-        .map_err(|_| AuthAPIError::InvalidToken)?;
-
-    Ok(StatusCode::OK.into_response())
 }

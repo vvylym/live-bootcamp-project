@@ -10,7 +10,7 @@ use crate::{
     domain::{
         error::AuthAPIError,
         models::{Email, LoginAttemptId, Password, TwoFACode},
-        ports::{BannedStore, EmailClient, TwoFACodeStore, UserStore},
+        ports::{BannedTokenStore, EmailClient, TwoFACodeStore, UserStore},
     },
 };
 
@@ -31,81 +31,99 @@ use crate::{
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
-pub async fn handle_login<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailClient>(
+pub async fn handle_login<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: EmailClient>(
     State(state): State<AppState<S, B, T, E>>,
     jar: CookieJar,
     Json(request): Json<LoginRequest>,
-) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
-    let email = Email::parse(&request.email).map_err(|_| AuthAPIError::InvalidCredentials)?;
-    let password =
-        Password::parse(&request.password).map_err(|_| AuthAPIError::InvalidCredentials)?;
+) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>) {
+    let password = match Password::parse(&request.password) {
+        Ok(password) => password,
+        Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
+    };
 
-    let user_store = state.user_store.write().await;
+    let email = match Email::parse(&request.email) {
+        Ok(email) => email,
+        Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
+    };
+
+    let user_store = &state.user_store.read().await;
 
     if user_store.validate_user(&email, &password).await.is_err() {
-        return Err(AuthAPIError::IncorrectCredentials);
+        return (jar, Err(AuthAPIError::IncorrectCredentials));
     }
 
     let user = match user_store.get_user(&email).await {
         Ok(user) => user,
-        Err(_) => return Err(AuthAPIError::IncorrectCredentials),
+        Err(_) => return (jar, Err(AuthAPIError::IncorrectCredentials)),
     };
 
-    // Handle request based on user's 2FA configuration
     match user.requires_2fa {
-        true => handle_2fa(&email, &state, jar).await,
+        true => handle_2fa(&user.email, &state, jar).await,
         false => handle_no_2fa(&user.email, jar).await,
     }
 }
 
 // New!
-async fn handle_2fa<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailClient>(
+async fn handle_2fa<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: EmailClient>(
     email: &Email,
-    state: &AppState<S, B, T, E>, // New!
+    state: &AppState<S, B, T, E>,
     jar: CookieJar,
-) -> Result<(CookieJar, (StatusCode, Json<LoginResponse>)), AuthAPIError> {
-    // First, we must generate a new random login attempt ID and 2FA code
+) -> (
+    CookieJar,
+    Result<(StatusCode, Json<LoginResponse>), AuthAPIError>,
+) {
     let login_attempt_id = LoginAttemptId::default();
     let two_fa_code = TwoFACode::default();
 
-    let mut two_fa_store = state.two_fa_store.write().await;
-    let email_client = state.email_client.write().await;
-
-    if two_fa_store
-        .add_code(email.to_owned(), login_attempt_id.clone(), two_fa_code.clone())
+    if state
+        .two_fa_store
+        .write()
+        .await
+        .add_code(email.clone(), login_attempt_id.clone(), two_fa_code.clone())
         .await
         .is_err()
     {
-        return Err(AuthAPIError::UnexpectedError);
+        return (jar, Err(AuthAPIError::UnexpectedError));
     }
-    if email_client.send_email(&email, "Login", two_fa_code.as_ref()).await.is_err() {
-        return Err(AuthAPIError::UnexpectedError);
+
+    if state
+        .email_client
+        .read()
+        .await
+        .send_email(email, "2FA Code", two_fa_code.as_ref())
+        .await
+        .is_err()
+    {
+        return (jar, Err(AuthAPIError::UnexpectedError));
     }
-    Ok((
-        jar,
-        (
-            StatusCode::PARTIAL_CONTENT,
-            Json(LoginResponse::TwoFactorAuth(MFARequiredResponse {
-                message: "2FA required".to_owned(),
-                login_attempt_id: login_attempt_id.as_ref().to_string(),
-            })),
-        ),
-    ))
+
+    let response = Json(LoginResponse::TwoFactorAuth(MFARequiredResponse {
+        message: "2FA required".to_owned(),
+        login_attempt_id: login_attempt_id.as_ref().to_owned(),
+    }));
+
+    (jar, Ok((StatusCode::PARTIAL_CONTENT, response)))
 }
 
 // New!
 async fn handle_no_2fa(
     email: &Email,
     jar: CookieJar,
-) -> Result<(CookieJar, (StatusCode, Json<LoginResponse>)), AuthAPIError> {
-    let auth_cookie = generate_auth_cookie(&email).map_err(|_| AuthAPIError::UnexpectedError)?;
+) -> (
+    CookieJar,
+    Result<(StatusCode, Json<LoginResponse>), AuthAPIError>,
+) {
+    let auth_cookie = match generate_auth_cookie(email) {
+        Ok(cookie) => cookie,
+        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
+    };
 
     let updated_jar = jar.add(auth_cookie);
 
-    Ok((
+    (
         updated_jar,
-        (StatusCode::OK, Json(LoginResponse::RegularAuth)),
-    ))
+        Ok((StatusCode::OK, Json(LoginResponse::RegularAuth))),
+    )
 }
 
 use serde::Serialize;

@@ -9,12 +9,12 @@ use axum::{Router, serve::Serve};
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::RwLock};
 
-use crate::domain::ports::{BannedStore, EmailClient, TwoFACodeStore, UserStore};
+use crate::domain::ports::{BannedTokenStore, EmailClient, TwoFACodeStore, UserStore};
 
 #[derive(Clone)]
-pub struct AppState<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailClient> {
+pub struct AppState<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: EmailClient> {
     pub user_store: Arc<RwLock<S>>,
-    pub banned_store: Arc<RwLock<B>>,
+    pub banned_token_store: Arc<RwLock<B>>,
     pub two_fa_store: Arc<RwLock<T>>,
     pub email_client: Arc<RwLock<E>>,
 }
@@ -22,19 +22,19 @@ pub struct AppState<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailCli
 impl<S, B, T, E> AppState<S, B, T, E>
 where
     S: UserStore,
-    B: BannedStore,
+    B: BannedTokenStore,
     T: TwoFACodeStore,
     E: EmailClient,
 {
     pub fn new(
         user_store: Arc<RwLock<S>>,
-        banned_store: Arc<RwLock<B>>,
+        banned_token_store: Arc<RwLock<B>>,
         two_fa_store: Arc<RwLock<T>>,
         email_client: Arc<RwLock<E>>,
     ) -> Self {
         Self {
             user_store,
-            banned_store,
+            banned_token_store,
             two_fa_store,
             email_client,
         }
@@ -52,7 +52,7 @@ pub struct Application {
 
 impl Application {
     /// Builds a new instance of the `Application`.
-    pub async fn build<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailClient>(
+    pub async fn build<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: EmailClient>(
         app_state: AppState<S, B, T, E>,
         address: &str,
     ) -> Result<Self, Box<dyn std::error::Error>> {

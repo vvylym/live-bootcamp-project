@@ -1,22 +1,22 @@
-use crate::domain::ports::{BannedStore, BannedStoreError};
+use crate::domain::ports::{BannedTokenStore, BannedTokenStoreError};
 use std::collections::HashSet;
 
 /// A store for banned tokens using a HashSet.
 #[derive(Default, Clone)]
-pub struct HashSetBannedStore {
+pub struct HashsetBannedTokenStore {
     /// A set of banned tokens.
-    banned_tokens: HashSet<String>,
+    tokens: HashSet<String>,
 }
 
-impl BannedStore for HashSetBannedStore {
+impl BannedTokenStore for HashsetBannedTokenStore {
     /// Checks if a token is banned.
-    async fn is_banned(&self, token: &str) -> Result<bool, BannedStoreError> {
-        Ok(self.banned_tokens.contains(token))
+    async fn contains_token(&self, token: &str) -> Result<bool, BannedTokenStoreError> {
+        Ok(self.tokens.contains(token))
     }
 
     /// Adds a token to the banned store.
-    async fn add_token(&mut self, token: &str) -> Result<(), BannedStoreError> {
-        self.banned_tokens.insert(token.to_owned());
+    async fn add_token(&mut self, token: &str) -> Result<(), BannedTokenStoreError> {
+        self.tokens.insert(token.to_owned());
         Ok(())
     }
 }
@@ -27,16 +27,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_add_token() {
-        let mut banned_store = HashSetBannedStore::default();
-        banned_store.add_token("test_token").await.unwrap();
-        assert!(banned_store.is_banned("test_token").await.unwrap());
+        let mut store = HashsetBannedTokenStore::default();
+        let token = "test_token".to_owned();
+
+        let result = store.add_token(&token).await;
+
+        assert!(result.is_ok());
+        assert!(store.tokens.contains(&token));
     }
 
     #[tokio::test]
-    async fn test_is_banned() {
-        let mut banned_store = HashSetBannedStore::default();
-        banned_store.add_token("banned_token").await.unwrap();
-        assert!(!banned_store.is_banned("not_banned_token").await.unwrap());
-        assert!(banned_store.is_banned("banned_token").await.unwrap());
+    async fn test_contains_token() {
+        let mut store = HashsetBannedTokenStore::default();
+        let token = "test_token".to_owned();
+        store.tokens.insert(token.clone());
+
+        let result = store.contains_token(&token).await;
+
+        assert!(result.unwrap());
     }
 }

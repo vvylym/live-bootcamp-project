@@ -6,7 +6,7 @@ use crate::{
     },
     domain::{
         error::AuthAPIError,
-        ports::{BannedStore, EmailClient, TwoFACodeStore, UserStore},
+        ports::{BannedTokenStore, EmailClient, TwoFACodeStore, UserStore},
     },
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
@@ -24,37 +24,36 @@ use axum_extra::extract::{CookieJar, cookie::Cookie};
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
-pub async fn handle_logout<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailClient>(
+pub async fn handle_logout<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: EmailClient>(
     State(state): State<AppState<S, B, T, E>>,
     jar: CookieJar,
-) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
-    let cookie = jar.get(JWT_COOKIE_NAME).ok_or(AuthAPIError::MissingToken)?;
+) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>) {
+    let cookie = match jar.get(JWT_COOKIE_NAME) {
+        Some(cookie) => cookie,
+        None => return (jar, Err(AuthAPIError::MissingToken)),
+    };
 
+    // Validate token
     let token = cookie.value().to_owned();
+    let _ = match validate_token(&token, state.banned_token_store.clone()).await {
+        Ok(claims) => claims,
+        Err(_) => return (jar, Err(AuthAPIError::InvalidToken)),
+    };
 
-    let mut banned_store = state.banned_store.write().await;
-
-    match banned_store.is_banned(&token).await {
-        Ok(is_banned) => {
-            if is_banned {
-                return Err(AuthAPIError::InvalidToken);
-            } else {
-                validate_token(&token)
-                    .await
-                    .map_err(|_| AuthAPIError::InvalidToken)?;
-
-                banned_store
-                    .add_token(&token)
-                    .await
-                    .map_err(|_| AuthAPIError::UnexpectedError)?;
-            }
-        }
-        Err(_) => return Err(AuthAPIError::UnexpectedError),
+    // Add token to banned list
+    if state
+        .banned_token_store
+        .write()
+        .await
+        .add_token(&token)
+        .await
+        .is_err()
+    {
+        return (jar, Err(AuthAPIError::UnexpectedError));
     }
 
-    let jar = jar
-        .clone()
-        .remove(Cookie::new(JWT_COOKIE_NAME, cookie.value().to_owned()));
+    // Remove jwt cookie
+    let jar = jar.remove(Cookie::from(JWT_COOKIE_NAME));
 
-    Ok((jar, StatusCode::OK.into_response()))
+    (jar, Ok(StatusCode::OK))
 }

@@ -20,7 +20,7 @@ fn is_valid_code(code: &str) -> bool {
     }
     // Check if all characters are digits.
     for c in code.chars() {
-        if !c.is_digit(10) {
+        if !c.is_ascii_digit() {
             return false;
         }
     }

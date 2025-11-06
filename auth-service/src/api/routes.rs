@@ -10,7 +10,7 @@ use utoipa_rapidoc::RapiDoc;
 
 use crate::{
     api::AppState,
-    domain::ports::{BannedStore, EmailClient, TwoFACodeStore, UserStore},
+    domain::ports::{BannedTokenStore, EmailClient, TwoFACodeStore, UserStore},
 };
 
 use super::handlers::*;
@@ -60,7 +60,7 @@ use super::handlers::*;
 )]
 struct ApiDoc;
 
-pub fn api_routes<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailClient>(
+pub fn api_routes<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: EmailClient>(
     app_state: AppState<S, B, T, E>,
 ) -> Router {
     let allowed_origins = [

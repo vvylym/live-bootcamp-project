@@ -6,7 +6,7 @@ use crate::{
     domain::{
         error::AuthAPIError,
         models::{Email, Password, User},
-        ports::{BannedStore, EmailClient, TwoFACodeStore, UserStore},
+        ports::{BannedTokenStore, EmailClient, TwoFACodeStore, UserStore},
     },
 };
 
@@ -24,7 +24,7 @@ use crate::{
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
-pub async fn handle_signup<S: UserStore, B: BannedStore, T: TwoFACodeStore, E: EmailClient>(
+pub async fn handle_signup<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: EmailClient>(
     State(state): State<AppState<S, B, T, E>>,
     Json(request): Json<SignUpRequest>,
 ) -> Result<impl IntoResponse, AuthAPIError> {

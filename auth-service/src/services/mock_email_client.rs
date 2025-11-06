@@ -1,6 +1,6 @@
 use crate::domain::{models::Email, ports::EmailClient};
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct MockEmailClient;
 
 impl EmailClient for MockEmailClient {

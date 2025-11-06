@@ -18,16 +18,18 @@ pub trait UserStore: Send + Sync + Clone + 'static {
 }
 
 /// A trait for a banned store.
-pub trait BannedStore: Send + Sync + Clone + 'static {
+pub trait BannedTokenStore: Send + Sync + Clone + 'static {
     /// Checks if an email is banned.
-    fn is_banned(&self, token: &str)
-    -> impl Future<Output = Result<bool, BannedStoreError>> + Send;
+    fn contains_token(
+        &self,
+        token: &str,
+    ) -> impl Future<Output = Result<bool, BannedTokenStoreError>> + Send;
 
     /// Adds a token to the banned store.
     fn add_token(
         &mut self,
         token: &str,
-    ) -> impl Future<Output = Result<(), BannedStoreError>> + Send;
+    ) -> impl Future<Output = Result<(), BannedTokenStoreError>> + Send;
 }
 
 /// An error that can occur when interacting with the user store.
@@ -45,7 +47,7 @@ pub enum UserStoreError {
 
 /// An error that can occur when interacting with the banned store.
 #[derive(Debug, PartialEq)]
-pub enum BannedStoreError {
+pub enum BannedTokenStoreError {
     /// Indicates that an unexpected error occurred.
     UnexpectedError,
 }
@@ -74,7 +76,7 @@ pub enum TwoFACodeStoreError {
     UnexpectedError,
 }
 
-///
+/// This trait represent the interface for email clients.
 pub trait EmailClient: Send + Sync + Clone + 'static {
     fn send_email(
         &self,
