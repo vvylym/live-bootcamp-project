@@ -10,6 +10,7 @@ pub mod domain;
 pub mod services;
 
 use domain::ports::{BannedTokenStore, EmailClient, TwoFACodeStore, UserStore};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -26,3 +27,8 @@ pub type BannedTokenStoreType = Arc<RwLock<dyn BannedTokenStore>>;
 pub type TwoFACodeStoreType = Arc<RwLock<dyn TwoFACodeStore>>;
 
 pub type EmailClientType = Arc<RwLock<dyn EmailClient>>;
+
+pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
+    // Create a new PostgreSQL connection pool
+    PgPoolOptions::new().max_connections(5).connect(url).await
+}

@@ -102,7 +102,7 @@ mod tests {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    use crate::services::HashsetBannedTokenStore;
+    use crate::services::data_stores::HashsetBannedTokenStore;
 
     use super::*;
 

@@ -19,6 +19,7 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 # Build application - copy entire workspace
 COPY . .
+ENV SQLX_OFFLINE true
 RUN cargo build --release --bin auth-service
 
 # We do not need the Rust toolchain to run the binary!
