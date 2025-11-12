@@ -17,7 +17,10 @@ use tokio::sync::RwLock;
 
 pub use api::{
     AppState, Application,
-    utils::constants::{prod, test},
+    utils::{
+        constants::{prod, test},
+        tracing::init_tracing,
+    },
 };
 
 // Using a type alias to improve readability!

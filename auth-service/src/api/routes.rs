@@ -4,7 +4,7 @@ use axum::{
     response::Html,
     routing::{get, post},
 };
-use tower_http::{cors::CorsLayer, services::ServeDir};
+use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
@@ -14,6 +14,7 @@ use crate::{
 };
 
 use super::handlers::*;
+use super::utils::tracing::{make_span_with_request_id, on_request, on_response};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -88,6 +89,12 @@ pub fn api_routes<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: Email
         .fallback_service(ServeDir::new("auth-service/assets"))
         .with_state(app_state)
         .layer(cors)
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(make_span_with_request_id)
+                .on_request(on_request)
+                .on_response(on_response),
+        )
 }
 
 #[utoipa::path(

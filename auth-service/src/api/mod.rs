@@ -3,11 +3,11 @@ pub mod handlers;
 pub mod routes;
 pub mod utils;
 
-use routes::api_routes;
-
 use axum::{Router, serve::Serve};
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::RwLock};
+
+use routes::api_routes;
 
 use crate::domain::ports::{BannedTokenStore, EmailClient, TwoFACodeStore, UserStore};
 
@@ -71,6 +71,7 @@ impl Application {
 
     /// Runs the application server.
     pub async fn run(self) -> Result<(), std::io::Error> {
+        tracing::info!("listening on {}", &self.address);
         println!("listening on {}", &self.address);
         self.server.await
     }

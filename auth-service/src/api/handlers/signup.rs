@@ -24,6 +24,7 @@ use crate::{
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
+#[tracing::instrument(name = "Signup", skip_all, err(Debug))]
 pub async fn handle_signup<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: EmailClient>(
     State(state): State<AppState<S, B, T, E>>,
     Json(request): Json<SignUpRequest>,

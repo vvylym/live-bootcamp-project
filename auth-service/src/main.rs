@@ -3,12 +3,16 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use auth_service::{AppState, Application, get_postgres_pool, get_redis_client, prod};
-
-use auth_service::services::data_stores::*;
+use auth_service::{
+    AppState, Application, get_postgres_pool, get_redis_client, init_tracing, prod,
+    services::data_stores::*,
+};
 
 #[tokio::main]
 async fn main() {
+    // Initialize tracing
+    init_tracing();
+
     let pg_pool = configure_postgresql().await;
 
     let user_store = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
