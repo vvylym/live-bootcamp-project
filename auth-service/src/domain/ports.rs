@@ -1,5 +1,10 @@
-use super::models::*;
+use color_eyre::eyre::Report;
+use rand::Rng;
 use std::future::Future;
+use thiserror::Error;
+
+use super::models::*;
+
 
 /// A trait for a user store.
 pub trait UserStore: Send + Sync + Clone + 'static {
@@ -33,16 +38,32 @@ pub trait BannedTokenStore: Send + Sync + Clone + 'static {
 }
 
 /// An error that can occur when interacting with the user store.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum UserStoreError {
     /// Indicates that a user with the given email already exists.
+    #[error("User already exists")]
     UserAlreadyExists,
     /// Indicates that a user with the given email was not found.
+    #[error("Unexpected error")]
     UserNotFound,
     /// Indicates that the provided credentials are invalid.
+    #[error("Invalid credentials")]
     InvalidCredentials,
     /// Indicates that an unexpected error occurred.
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
+}
+
+impl PartialEq for UserStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::UserAlreadyExists, Self::UserAlreadyExists)
+                | (Self::UserNotFound, Self::UserNotFound)
+                | (Self::InvalidCredentials, Self::InvalidCredentials)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
 }
 
 /// An error that can occur when interacting with the banned store.

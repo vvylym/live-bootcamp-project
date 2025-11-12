@@ -10,8 +10,9 @@ use auth_service::{
 
 #[tokio::main]
 async fn main() {
-    // Initialize tracing
-    init_tracing();
+    
+    color_eyre::install().expect("Failed to install color_eyre");
+    init_tracing().expect("Failed to initialize tracing");
 
     let pg_pool = configure_postgresql().await;
 

@@ -10,6 +10,7 @@ argon2 = { workspace = true, features = ["std"] }
 axum = { workspace = true }
 axum-extra = { workspace = true, features = ["cookie"] }
 chrono = { workspace = true }
+color-eyre = { workspace = true }
 dotenvy = { workspace = true }
 jsonwebtoken = { workspace = true, features = ["aws_lc_rs"] }
 lazy_static = { workspace = true }
@@ -18,10 +19,12 @@ redis = { workspace = true, features = ["tokio-comp"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio-rustls", "postgres", "migrate"]}
+thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 tower-http = { workspace = true, features = ["fs", "cors", "trace"] }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true, features = ["env-filter"] }
+tracing-error = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "registry"] }
 utoipa = { workspace = true, features = ["axum_extras", "uuid"] }
 utoipa-rapidoc = { workspace = true, features = ["axum"] }
 uuid = { workspace = true, features = ["v4", "serde"] }

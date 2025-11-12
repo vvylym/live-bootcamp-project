@@ -1,10 +1,8 @@
-use std::error::Error;
-
 use argon2::{
     Algorithm, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier, Version,
     password_hash::SaltString,
 };
-
+use color_eyre::eyre::{eyre, Context, Result};
 use sqlx::PgPool;
 
 use crate::domain::{
@@ -26,42 +24,46 @@ impl PostgresUserStore {
 impl UserStore for PostgresUserStore {
     #[tracing::instrument(name = "Adding user to PostgreSQL", skip_all)]
     async fn add_user(&mut self, user: &User) -> Result<(), UserStoreError> {
-        let password_hash = compute_password_hash(user.password.as_ref().to_string())
-            .await
-            .map_err(|_| UserStoreError::UnexpectedError)?;
+        let password_hash = 
+            compute_password_hash(user.password.as_ref().to_owned())
+                .await
+                .map_err(|e| UserStoreError::UnexpectedError(e.into()))?;
 
         sqlx::query!(
-            "INSERT INTO users (email, password_hash, requires_2fa) VALUES ($1, $2, $3)",
+            r#"
+            INSERT INTO users (email, password_hash, requires_2fa)
+            VALUES ($1, $2, $3)
+            "#,
             user.email.as_ref(),
-            password_hash,
+            &password_hash,
             user.requires_2fa
         )
         .execute(&self.pool)
         .await
-        .map_err(|_| UserStoreError::UnexpectedError)?;
+        .map_err(|e| UserStoreError::UnexpectedError(e.into()))?;
 
         Ok(())
     }
 
     #[tracing::instrument(name = "Retrieving user from PostgreSQL", skip_all)]
     async fn get_user(&self, email: &Email) -> Result<User, UserStoreError> {
-        let record = sqlx::query!(
+        sqlx::query!(
             "SELECT email, password_hash as password, requires_2fa FROM users WHERE email = $1",
             email.as_ref()
         )
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await
-        .map_err(|e| match e {
-            sqlx::Error::RowNotFound => UserStoreError::UserNotFound,
-            _ => UserStoreError::UnexpectedError,
-        })?;
-        let user = User {
-            email: Email::parse(&record.email).map_err(|_| UserStoreError::UnexpectedError)?,
-            password: Password::parse(&record.password)
-                .map_err(|_| UserStoreError::UnexpectedError)?,
-            requires_2fa: record.requires_2fa,
-        };
-        Ok(user)
+        .map_err(|e| UserStoreError::UnexpectedError(e.into()))?
+        .map(|row| 
+            Ok(User{
+                email: Email::parse(&row.email)
+                    .map_err(|e| UserStoreError::UnexpectedError(eyre!(e)))?,
+                password: Password::parse(&row.password)
+                    .map_err(|e| UserStoreError::UnexpectedError(eyre!(e)))?,
+                requires_2fa: row.requires_2fa,
+            })
+        )
+        .ok_or(UserStoreError::UserNotFound)?
     }
 
     #[tracing::instrument(name = "Validating user credentials in PostgreSQL", skip_all)]
@@ -92,7 +94,7 @@ impl UserStore for PostgresUserStore {
 async fn verify_password_hash(
     expected_password_hash: String,
     password_candidate: String,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
+) -> Result<()> {
     let current_span: tracing::Span = tracing::Span::current();
     let result = tokio::task::spawn_blocking(move || {
         // This code block ensures that the operations within the closure are executed within the context of the current span.
@@ -120,7 +122,7 @@ async fn verify_password_hash(
 #[tracing::instrument(name = "Computing password hash", skip_all)]
 async fn compute_password_hash(
     password: String,
-) -> Result<String, Box<dyn Error + Send + Sync>> {
+) -> Result<String> {
     // This line retrieves the current span from the tracing context. 
     // The span represents the execution context for the compute_password_hash function.
     let current_span: tracing::Span = tracing::Span::current();
@@ -133,10 +135,11 @@ async fn compute_password_hash(
             let password_hash = Argon2::new(
                 Algorithm::Argon2id,
                 Version::V0x13,
-                Params::new(15000, 2, 1, None).map_err(|e| e.to_string())?,
+                Params::new(15000, 2, 1, None)
+                .map_err(|e| eyre!(e))?,
             )
                 .hash_password(password.as_bytes(), &salt)
-                .map_err(|e| e.to_string())?
+                .map_err(|e| eyre!(e))?
                 .to_string();
 
             Ok(password_hash)

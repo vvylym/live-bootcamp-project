@@ -43,6 +43,8 @@ pub struct ErrorResponse {
 
 impl IntoResponse for AuthAPIError {
     fn into_response(self) -> Response {
+        log_error_chain(&self);
+
         let (status, error_message) = match self {
             AuthAPIError::InvalidPassword => (StatusCode::BAD_REQUEST, "Invalid password"),
             AuthAPIError::InvalidEmail => (StatusCode::BAD_REQUEST, "Invalid email address"),
@@ -53,7 +55,7 @@ impl IntoResponse for AuthAPIError {
             }
             AuthAPIError::MissingToken => (StatusCode::BAD_REQUEST, "Missing auth token"),
             AuthAPIError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid auth token"),
-            AuthAPIError::UnexpectedError => {
+            AuthAPIError::UnexpectedError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error")
             }
         };
@@ -62,4 +64,19 @@ impl IntoResponse for AuthAPIError {
         });
         (status, body).into_response()
     }
+}
+
+
+fn log_error_chain(e: &(dyn std::error::Error + 'static)) {
+    let separator =
+        "\n-----------------------------------------------------------------------------------\n";
+    let mut report = format!("{}{:?}\n", separator, e);
+    let mut current = e.source();
+    while let Some(cause) = current {
+        let str = format!("Caused by:\n\n{:?}", cause);
+        report = format!("{}\n{}", report, str);
+        current = cause.source();
+    }
+    report = format!("{}\n{}", report, separator);
+    tracing::error!("{}", report);
 }

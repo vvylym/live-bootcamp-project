@@ -24,7 +24,7 @@ use crate::{
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
-#[tracing::instrument(name = "Signup", skip_all, err(Debug))]
+#[tracing::instrument(name = "Signup", skip_all)]
 pub async fn handle_signup<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: EmailClient>(
     State(state): State<AppState<S, B, T, E>>,
     Json(request): Json<SignUpRequest>,
@@ -41,9 +41,9 @@ pub async fn handle_signup<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore,
         return Err(AuthAPIError::UserAlreadyExists);
     }
 
-    if user_store.add_user(&user).await.is_err() {
-        return Err(AuthAPIError::UnexpectedError);
-    }
+    user_store.add_user(&user)
+        .await
+        .map_err(|e| AuthAPIError::UnexpectedError(e.into()))?;
 
     let response = Json(SignUpResponse {
         message: "User created successfully!".to_string(),
