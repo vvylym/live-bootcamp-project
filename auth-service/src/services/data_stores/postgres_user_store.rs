@@ -25,10 +25,9 @@ impl PostgresUserStore {
 impl UserStore for PostgresUserStore {
     #[tracing::instrument(name = "Adding user to PostgreSQL", skip_all)]
     async fn add_user(&mut self, user: &User) -> Result<(), UserStoreError> {
-        let password_hash = 
-            compute_password_hash(user.password.as_ref().to_owned())
-                .await
-                .map_err(UserStoreError::UnexpectedError)?;
+        let password_hash = compute_password_hash(user.password.as_ref().to_owned())
+            .await
+            .map_err(UserStoreError::UnexpectedError)?;
 
         sqlx::query!(
             r#"
@@ -108,14 +107,12 @@ async fn verify_password_hash(
         current_span.in_scope(|| {
             // New!
             let expected_password_hash: PasswordHash<'_> =
-                PasswordHash::new(
-                    &expected_password_hash.expose_secret()
-                )?;
+                PasswordHash::new(expected_password_hash.expose_secret())?;
 
             Argon2::default()
                 .verify_password(
-                    password_candidate.expose_secret().as_bytes(), 
-                    &expected_password_hash
+                    password_candidate.expose_secret().as_bytes(),
+                    &expected_password_hash,
                 )
                 .wrap_err("failed to verify password hash")
         })
@@ -135,7 +132,7 @@ async fn compute_password_hash(password: SecretString) -> Result<SecretString> {
     // This line retrieves the current span from the tracing context.
     // The span represents the execution context for the compute_password_hash function.
     let current_span: tracing::Span = tracing::Span::current();
-    
+
     let result = tokio::task::spawn_blocking(move || {
         // This code block ensures that the operations within the closure are executed within the context of the current span.
         // This is especially useful for tracing operations that are performed in a different thread or task, such as within tokio::task::spawn_blocking.

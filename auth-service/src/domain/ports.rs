@@ -1,4 +1,5 @@
 use color_eyre::eyre::Report;
+use secrecy::SecretString;
 use std::future::Future;
 use thiserror::Error;
 
@@ -54,13 +55,13 @@ pub trait BannedTokenStore: Send + Sync + Clone + 'static {
     /// Checks if an email is banned.
     fn contains_token(
         &self,
-        token: &str,
+        token: &SecretString,
     ) -> impl Future<Output = Result<bool, BannedTokenStoreError>> + Send;
 
     /// Adds a token to the banned store.
     fn add_token(
         &mut self,
-        token: &str,
+        token: &SecretString,
     ) -> impl Future<Output = Result<(), BannedTokenStoreError>> + Send;
 }
 

@@ -35,7 +35,7 @@ pub async fn handle_logout<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore,
     };
 
     // Validate token
-    let token = cookie.value().to_owned();
+    let token = cookie.value().into();
     let _ = match validate_token(&token, state.banned_token_store.clone()).await {
         Ok(claims) => claims,
         Err(_) => return (jar, Err(AuthAPIError::InvalidToken)),

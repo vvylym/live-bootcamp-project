@@ -1,7 +1,7 @@
 use std::hash::Hash;
 
 use crate::domain::error::AuthAPIError;
-use secrecy::{SecretString, ExposeSecret};
+use secrecy::{ExposeSecret, SecretString};
 use validator::ValidateEmail;
 
 /// Email
@@ -9,10 +9,12 @@ use validator::ValidateEmail;
 pub struct Email(SecretString);
 
 impl PartialEq for Email {
-     fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.0.expose_secret() == other.0.expose_secret()
     }
 }
+
+impl Eq for Email {}
 
 impl Hash for Email {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -20,7 +22,7 @@ impl Hash for Email {
     }
 }
 
-impl Eq for Email {}
+
 
 impl Email {
     /// Parses a string into an Email.

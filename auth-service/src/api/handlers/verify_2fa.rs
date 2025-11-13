@@ -1,6 +1,7 @@
 use axum::{Json, extract::State, response::IntoResponse};
 use axum_extra::extract::CookieJar;
 use color_eyre::eyre::eyre;
+use secrecy::ExposeSecret;
 
 use crate::{
     AppState,
@@ -47,7 +48,7 @@ pub async fn handle_verify_2fa<
         Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
     };
 
-    let login_attempt_id = match LoginAttemptId::parse(request.login_attempt_id.clone()) {
+    let login_attempt_id = match LoginAttemptId::parse(request.login_attempt_id) {
         Ok(login_attempt_id) => login_attempt_id,
         Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
     };

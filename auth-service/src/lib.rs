@@ -11,6 +11,7 @@ pub mod services;
 
 use domain::ports::{BannedTokenStore, EmailClient, TwoFACodeStore, UserStore};
 use redis::{Client, RedisResult};
+use secrecy::{ExposeSecret, SecretString};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -32,12 +33,15 @@ pub type TwoFACodeStoreType = Arc<RwLock<dyn TwoFACodeStore>>;
 
 pub type EmailClientType = Arc<RwLock<dyn EmailClient>>;
 
-pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
+pub async fn get_postgres_pool(url: SecretString) -> Result<PgPool, sqlx::Error> {
     // Create a new PostgreSQL connection pool
-    PgPoolOptions::new().max_connections(5).connect(url).await
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(url.expose_secret())
+        .await
 }
 
-pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {
-    let redis_url = format!("redis://{}/", redis_hostname);
+pub fn get_redis_client(redis_hostname: SecretString) -> RedisResult<Client> {
+    let redis_url = format!("redis://{}/", redis_hostname.expose_secret());
     redis::Client::open(redis_url)
 }

@@ -1,4 +1,5 @@
 use redis::RedisResult;
+use secrecy::{ExposeSecret, SecretString};
 use sqlx::{
     Connection, Executor, PgConnection, PgPool,
     postgres::{PgConnectOptions, PgPoolOptions},
@@ -194,12 +195,16 @@ async fn configure_postgresql() -> PgPool {
     // We are creating a new database for each test case, and we need to ensure each database has a unique name!
     let db_name = Uuid::new_v4().to_string();
 
-    configure_database(&postgresql_conn_url, &db_name).await;
+    configure_database(postgresql_conn_url.expose_secret(), &db_name).await;
 
-    let postgresql_conn_url_with_db = format!("{}/{}", postgresql_conn_url, db_name);
+    let postgresql_conn_url_with_db = SecretString::from(format!(
+        "{}/{}",
+        postgresql_conn_url.expose_secret(),
+        db_name
+    ));
 
     // Create a new connection pool and return it
-    get_postgres_pool(&postgresql_conn_url_with_db)
+    get_postgres_pool(postgresql_conn_url_with_db)
         .await
         .expect("Failed to create Postgres connection pool!")
 }
@@ -233,9 +238,9 @@ async fn configure_database(db_conn_string: &str, db_name: &str) {
 }
 
 async fn delete_database(db_name: &str) {
-    let postgresql_conn_url: String = DATABASE_URL.to_owned();
+    let postgresql_conn_url: SecretString = DATABASE_URL.to_owned();
 
-    let connection_options = PgConnectOptions::from_str(&postgresql_conn_url)
+    let connection_options = PgConnectOptions::from_str(postgresql_conn_url.expose_secret())
         .expect("Failed to parse PostgreSQL connection string");
 
     let mut connection = PgConnection::connect_with(&connection_options)
@@ -273,7 +278,7 @@ fn configure_redis() -> redis::Connection {
         .expect("Failed to get Redis connection")
 }
 
-pub fn get_redis_client(redis_hostname: String) -> RedisResult<redis::Client> {
-    let redis_url = format!("redis://{}/", redis_hostname);
+pub fn get_redis_client(redis_hostname: SecretString) -> RedisResult<redis::Client> {
+    let redis_url = format!("redis://{}/", redis_hostname.expose_secret());
     redis::Client::open(redis_url)
 }

@@ -114,7 +114,10 @@ mod tests {
 
         // Test validating a user that doesn't exist
         let result = user_store
-            .validate_user(&Email::parse("nonexistent@example.com".into()).unwrap(), &password)
+            .validate_user(
+                &Email::parse("nonexistent@example.com".into()).unwrap(),
+                &password,
+            )
             .await;
 
         assert_eq!(result, Err(UserStoreError::UserNotFound));

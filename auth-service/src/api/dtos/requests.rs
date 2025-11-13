@@ -48,10 +48,12 @@ pub struct Verify2faRequest {
     #[schema(value_type = String)]
     pub email: SecretString,
     #[serde(rename = "loginAttemptId")]
-    pub login_attempt_id: String,
+    #[schema(value_type = String)]
+    pub login_attempt_id: SecretString,
     /// The user's password.
     #[serde(rename = "2FACode")]
-    pub _2fa_code: String,
+    #[schema(value_type = String)]
+    pub _2fa_code: SecretString,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -60,5 +62,6 @@ pub struct Verify2faRequest {
 }))]
 pub struct VerifyTokenRequest {
     /// The user's email address.
-    pub token: String,
+    #[schema(value_type = String)]
+    pub token: SecretString,
 }

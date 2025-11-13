@@ -38,8 +38,8 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
         // Return TwoFACodeStoreError::UnexpectedError if casting fails or the call to set_ex fails.
         let key = get_key(&email);
         let two_fa_tuple = TwoFATuple(
-            login_attempt_id.as_ref().to_owned(),
-            code.as_ref().to_owned(),
+            login_attempt_id.as_ref().expose_secret().into(),
+            code.as_ref().expose_secret().into(),
         );
         let value = serde_json::to_string::<TwoFATuple>(&two_fa_tuple)
             .wrap_err("failed to deserialize 2FA tuple")
@@ -92,10 +92,10 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
                     .map_err(TwoFACodeStoreError::UnexpectedError)?; // Updated!
 
                 let login_attempt_id =
-                    LoginAttemptId::parse(data.0).map_err(TwoFACodeStoreError::UnexpectedError)?;
+                    LoginAttemptId::parse(data.0.into()).map_err(TwoFACodeStoreError::UnexpectedError)?;
 
                 let email_code =
-                    TwoFACode::parse(data.1).map_err(TwoFACodeStoreError::UnexpectedError)?;
+                    TwoFACode::parse(data.1.into()).map_err(TwoFACodeStoreError::UnexpectedError)?;
 
                 Ok((login_attempt_id, email_code))
             }

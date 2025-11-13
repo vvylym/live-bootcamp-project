@@ -2,7 +2,7 @@ use axum_extra::extract::cookie::{Cookie, SameSite};
 use chrono::Utc;
 use color_eyre::eyre::{Context, ContextCompat, Report};
 use jsonwebtoken::{DecodingKey, EncodingKey, Validation, decode, encode};
-use secrecy::ExposeSecret;
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
@@ -20,8 +20,8 @@ pub fn generate_auth_cookie(email: &Email) -> Result<Cookie<'static>, GenerateTo
 
 // Create cookie and set the value to the passed-in token string
 #[tracing::instrument(name = "Create Auth Cookie", skip_all)]
-fn create_auth_cookie(token: String) -> Cookie<'static> {
-    Cookie::build((JWT_COOKIE_NAME, token))
+fn create_auth_cookie(token: SecretString) -> Cookie<'static> {
+    Cookie::build((JWT_COOKIE_NAME, token.expose_secret().to_string()))
         .path("/") // apply cookie to all URLs on the server
         .http_only(true) // prevent JavaScript from accessing the cookie
         .same_site(SameSite::Lax) // send cookie with "same-site" requests, and with "cross-site" top-level navigations.
@@ -47,7 +47,7 @@ impl PartialEq for GenerateTokenError {
 }
 
 // Create JWT auth token
-fn generate_auth_token(email: &Email) -> Result<String, GenerateTokenError> {
+fn generate_auth_token(email: &Email) -> Result<SecretString, GenerateTokenError> {
     let delta = chrono::Duration::try_seconds(TOKEN_TTL_SECONDS)
         .wrap_err("failed to calculate delta")
         .map_err(GenerateTokenError::UnexpectedError)?;
@@ -69,15 +69,20 @@ fn generate_auth_token(email: &Email) -> Result<String, GenerateTokenError> {
 
     let claims = Claims { sub, exp };
 
-    create_token(&claims).map_err(GenerateTokenError::TokenError)
+    create_token(&claims)
+        .map_err(GenerateTokenError::TokenError)
 }
 
 // Check if JWT auth token is valid by decoding it using the JWT secret
 pub async fn validate_token(
-    token: &str,
+    token: &SecretString,
     banned_token_store: Arc<RwLock<impl BannedTokenStore>>,
 ) -> Result<Claims, jsonwebtoken::errors::Error> {
-    match banned_token_store.read().await.contains_token(token).await {
+    match banned_token_store
+            .read()
+            .await
+            .contains_token(token)
+            .await {
         Ok(value) => {
             if value {
                 return Err(jsonwebtoken::errors::Error::from(
@@ -93,20 +98,23 @@ pub async fn validate_token(
     }
 
     decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+        token.expose_secret(),
+        &DecodingKey::from_secret(JWT_SECRET.expose_secret().as_bytes()),
         &Validation::default(),
     )
     .map(|data| data.claims)
 }
 
 // Create JWT auth token by encoding claims using the JWT secret
-fn create_token(claims: &Claims) -> Result<String, jsonwebtoken::errors::Error> {
-    encode(
+fn create_token(claims: &Claims) -> Result<SecretString, jsonwebtoken::errors::Error> {
+    match encode(
         &jsonwebtoken::Header::default(),
         &claims,
-        &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
-    )
+        &EncodingKey::from_secret(JWT_SECRET.expose_secret().as_bytes()),
+    ) {
+        Ok(value) => Ok(SecretString::from(value)),
+        Err(e) => Err(e),
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -137,10 +145,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_auth_cookie() {
-        let token = "test_token".to_owned();
+        let token: SecretString = "test_token".into();
         let cookie = create_auth_cookie(token.clone());
         assert_eq!(cookie.name(), JWT_COOKIE_NAME);
-        assert_eq!(cookie.value(), token);
+        assert_eq!(cookie.value(), &token.expose_secret().to_string());
         assert_eq!(cookie.path(), Some("/"));
         assert_eq!(cookie.http_only(), Some(true));
         assert_eq!(cookie.same_site(), Some(SameSite::Lax));
@@ -150,7 +158,7 @@ mod tests {
     async fn test_generate_auth_token() {
         let email = Email::parse("test@example.com".into()).unwrap();
         let result = generate_auth_token(&email).unwrap();
-        assert_eq!(result.split('.').count(), 3);
+        assert_eq!(result.expose_secret().split('.').count(), 3);
     }
 
     #[tokio::test]
@@ -171,7 +179,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_token_with_invalid_token() {
-        let token = "invalid_token".to_owned();
+        let token: SecretString = "invalid_token".into();
         let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::default()));
         let result = validate_token(&token, banned_token_store).await;
         assert!(result.is_err());

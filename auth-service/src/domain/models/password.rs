@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use color_eyre::eyre::Result;
 use secrecy::{ExposeSecret, SecretString};
 
@@ -21,6 +23,14 @@ impl Password {
 impl PartialEq for Password {
     fn eq(&self, other: &Self) -> bool {
         self.0.expose_secret() == other.0.expose_secret()
+    }
+}
+ 
+impl Eq for Password {}
+
+impl Hash for Password {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.expose_secret().hash(state);
     }
 }
 

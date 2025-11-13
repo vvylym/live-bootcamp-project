@@ -4,6 +4,7 @@ use auth_service::{
 };
 
 use reqwest::Url;
+use secrecy::SecretString;
 
 use super::helpers::*;
 
@@ -54,7 +55,7 @@ async fn should_return_200_if_valid_jwt_cookie() {
 
     let banned_token_store = app.banned_token_store.read().await;
     let contains_token = banned_token_store
-        .contains_token(token)
+        .contains_token(&SecretString::from(token))
         .await
         .expect("Failed to check if token is banned");
 

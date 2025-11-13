@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use color_eyre::eyre::Context;
 use redis::{Commands, Connection};
+use secrecy::{ExposeSecret, SecretString};
 use tokio::sync::RwLock;
 
 use crate::{
@@ -30,7 +31,7 @@ impl RedisBannedTokenStore {
 }
 
 impl BannedTokenStore for RedisBannedTokenStore {
-    async fn add_token(&mut self, token: &str) -> Result<(), BannedTokenStoreError> {
+    async fn add_token(&mut self, token: &SecretString) -> Result<(), BannedTokenStoreError> {
         let token_key = get_key(token);
 
         let value = true;
@@ -51,7 +52,7 @@ impl BannedTokenStore for RedisBannedTokenStore {
         Ok(())
     }
 
-    async fn contains_token(&self, token: &str) -> Result<bool, BannedTokenStoreError> {
+    async fn contains_token(&self, token: &SecretString) -> Result<bool, BannedTokenStoreError> {
         let token_key = get_key(token);
 
         let is_banned: bool = self
@@ -69,8 +70,8 @@ impl BannedTokenStore for RedisBannedTokenStore {
 // We are using a key prefix to prevent collisions and organize data!
 const BANNED_TOKEN_KEY_PREFIX: &str = "banned_token:";
 
-fn get_key(token: &str) -> String {
-    format!("{}{}", BANNED_TOKEN_KEY_PREFIX, token)
+fn get_key(token: &SecretString) -> String {
+    format!("{}{}", BANNED_TOKEN_KEY_PREFIX, token.expose_secret())
 }
 
 #[cfg(test)]
@@ -95,17 +96,17 @@ mod tests {
 
         // 2. Add a single token
         let token = "test_token_single";
-        let result = store.add_token(token).await;
+        let result = store.add_token(&token.into()).await;
         assert!(result.is_ok(), "Failed to add token");
 
         // 3. Verify that the added key exists
-        let contains = store.contains_token(token).await;
+        let contains = store.contains_token(&token.into()).await;
         assert!(contains.is_ok(), "Failed to check if token exists");
         assert!(contains.unwrap(), "Token should exist after being added");
 
         // 4. Verify that a non-existing key does not exist
         let non_existing_token = "non_existing_token";
-        let non_existing = store.contains_token(non_existing_token).await;
+        let non_existing = store.contains_token(&non_existing_token.into()).await;
         assert!(
             non_existing.is_ok(),
             "Failed to check if non-existing token exists"
@@ -119,7 +120,7 @@ mod tests {
         store.reset_all().await;
 
         // 6. Verify that the single key added no longer exists
-        let contains_after_flush = store.contains_token(token).await;
+        let contains_after_flush = store.contains_token(&token.into()).await;
         assert!(
             contains_after_flush.is_ok(),
             "Failed to check if token exists after flush"

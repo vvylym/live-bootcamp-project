@@ -1,13 +1,31 @@
+use std::hash::Hash;
+
 use color_eyre::eyre::{Result, eyre};
 use rand::Rng;
+use secrecy::{SecretString, ExposeSecret};
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct TwoFACode(String);
+#[derive(Clone, Debug)]
+pub struct TwoFACode(SecretString);
+
+impl PartialEq for TwoFACode {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.expose_secret() == other.0.expose_secret()
+    }
+}
+
+impl Eq for TwoFACode {}
+
+impl Hash for TwoFACode {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.expose_secret().hash(state);
+    }
+}
+
 
 impl TwoFACode {
-    pub fn parse(code: String) -> Result<Self> {
+    pub fn parse(code: SecretString) -> Result<Self> {
         // Ensure `code` is a valid 6-digit code
-        match is_valid_code(&code) {
+        match is_valid_code(&code.expose_secret()) {
             true => Ok(Self(code)),
             _ => Err(eyre!("Invalid 2FA code")),
         }
@@ -37,7 +55,7 @@ impl Default for TwoFACode {
     }
 }
 
-fn generate_code() -> String {
+fn generate_code() -> SecretString {
     let mut rng = rand::rng();
     let mut code = String::new();
 
@@ -46,51 +64,53 @@ fn generate_code() -> String {
         code.push_str(&digit.to_string()); // Convert the digit to a string and append to the code
     }
 
-    code
+    code.into()
 }
 
 // TODO: Implement AsRef<str> for TwoFACode
-impl AsRef<str> for TwoFACode {
-    fn as_ref(&self) -> &str {
+impl AsRef<SecretString> for TwoFACode {
+    fn as_ref(&self) -> &SecretString {
         &self.0
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
 
     #[test]
     fn test_valid_code() {
-        assert_eq!(is_valid_code("123456"), true);
-        assert_eq!(is_valid_code("987654"), true);
-        assert_eq!(is_valid_code("000000"), true);
+        assert_eq!(is_valid_code("123456".into()), true);
+        assert_eq!(is_valid_code("987654".into()), true);
+        assert_eq!(is_valid_code("000000".into()), true);
     }
 
     #[test]
     fn test_invalid_code_too_short() {
-        assert_eq!(is_valid_code("12345"), false);
-        assert_eq!(is_valid_code("1234"), false);
+        assert_eq!(is_valid_code("12345".into()), false);
+        assert_eq!(is_valid_code("1234".into()), false);
     }
 
     #[test]
     fn test_invalid_code_too_long() {
-        assert_eq!(is_valid_code("1234567"), false);
-        assert_eq!(is_valid_code("12345678"), false);
+        assert_eq!(is_valid_code("1234567".into()), false);
+        assert_eq!(is_valid_code("12345678".into()), false);
     }
 
     #[test]
     fn test_invalid_code_non_digit() {
-        assert_eq!(is_valid_code("123a56"), false);
-        assert_eq!(is_valid_code("12345-6"), false);
-        assert_eq!(is_valid_code("12345.6"), false);
+        assert_eq!(is_valid_code("123a56".into()), false);
+        assert_eq!(is_valid_code("12345-6".into()), false);
+        assert_eq!(is_valid_code("12345.6".into()), false);
     }
 
     #[test]
     fn test_generate_code() {
         let code = generate_code();
-        assert_eq!(code.len(), 6);
-        for c in code.chars() {
+        assert_eq!(code.expose_secret().len(), 6);
+        for c in code.expose_secret().chars() {
             assert!(c.is_digit(10));
         }
     }
@@ -103,10 +123,10 @@ mod tests {
         }
 
         // Check if the codes are unique (probabilistic check)
-        let mut seen = std::collections::HashSet::new();
+        let mut seen: HashSet<String> = std::collections::HashSet::new();
         for code in &codes {
-            assert!(seen.insert(code));
-            assert!(is_valid_code(code))
+            assert!(seen.insert(code.expose_secret().to_string()));
+            assert!(is_valid_code(code.expose_secret()))
         }
     }
 }
