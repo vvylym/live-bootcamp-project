@@ -1,14 +1,15 @@
+use color_eyre::eyre::{Result, eyre};
 use rand::Rng;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TwoFACode(String);
 
 impl TwoFACode {
-    pub fn parse(code: String) -> Result<Self, String> {
+    pub fn parse(code: String) -> Result<Self> {
         // Ensure `code` is a valid 6-digit code
         match is_valid_code(&code) {
             true => Ok(Self(code)),
-            _ => Err("Invalid 2FA code".to_owned()),
+            _ => Err(eyre!("Invalid 2FA code")),
         }
     }
 }

@@ -1,10 +1,8 @@
 use color_eyre::eyre::Report;
-use rand::Rng;
 use std::future::Future;
 use thiserror::Error;
 
 use super::models::*;
-
 
 /// A trait for a user store.
 pub trait UserStore: Send + Sync + Clone + 'static {
@@ -20,21 +18,6 @@ pub trait UserStore: Send + Sync + Clone + 'static {
         email: &Email,
         password: &Password,
     ) -> impl Future<Output = Result<(), UserStoreError>> + Send;
-}
-
-/// A trait for a banned store.
-pub trait BannedTokenStore: Send + Sync + Clone + 'static {
-    /// Checks if an email is banned.
-    fn contains_token(
-        &self,
-        token: &str,
-    ) -> impl Future<Output = Result<bool, BannedTokenStoreError>> + Send;
-
-    /// Adds a token to the banned store.
-    fn add_token(
-        &mut self,
-        token: &str,
-    ) -> impl Future<Output = Result<(), BannedTokenStoreError>> + Send;
 }
 
 /// An error that can occur when interacting with the user store.
@@ -66,11 +49,36 @@ impl PartialEq for UserStoreError {
     }
 }
 
+/// A trait for a banned store.
+pub trait BannedTokenStore: Send + Sync + Clone + 'static {
+    /// Checks if an email is banned.
+    fn contains_token(
+        &self,
+        token: &str,
+    ) -> impl Future<Output = Result<bool, BannedTokenStoreError>> + Send;
+
+    /// Adds a token to the banned store.
+    fn add_token(
+        &mut self,
+        token: &str,
+    ) -> impl Future<Output = Result<(), BannedTokenStoreError>> + Send;
+}
+
 /// An error that can occur when interacting with the banned store.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum BannedTokenStoreError {
     /// Indicates that an unexpected error occurred.
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
+}
+
+impl PartialEq for BannedTokenStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
 }
 
 // This trait represents the interface all concrete 2FA code stores should implement
@@ -91,10 +99,22 @@ pub trait TwoFACodeStore: Send + Sync + Clone + 'static {
     ) -> impl Future<Output = Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError>> + Send;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum TwoFACodeStoreError {
+    #[error("Login Attempt ID not found")]
     LoginAttemptIdNotFound,
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
+}
+
+impl PartialEq for TwoFACodeStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::LoginAttemptIdNotFound, Self::LoginAttemptIdNotFound)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
 }
 
 /// This trait represent the interface for email clients.
@@ -104,5 +124,5 @@ pub trait EmailClient: Send + Sync + Clone + 'static {
         recipient: &Email,
         subject: &str,
         content: &str,
-    ) -> impl Future<Output = Result<(), String>> + Send;
+    ) -> impl Future<Output = color_eyre::eyre::Result<()>> + Send;
 }

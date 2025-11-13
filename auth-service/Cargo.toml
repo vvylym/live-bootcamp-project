@@ -16,6 +16,7 @@ jsonwebtoken = { workspace = true, features = ["aws_lc_rs"] }
 lazy_static = { workspace = true }
 rand = { workspace = true }
 redis = { workspace = true, features = ["tokio-comp"] }
+secrecy = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio-rustls", "postgres", "migrate"]}

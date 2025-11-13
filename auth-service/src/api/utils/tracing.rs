@@ -8,19 +8,17 @@ use color_eyre::eyre::Result;
 use tracing::{Level, Span};
 use tracing_error::ErrorLayer;
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 /// Initialize tracing.
 pub fn init_tracing() -> Result<()> {
-     // Create a formatting layer for tracing output with a compact format
+    // Create a formatting layer for tracing output with a compact format
     let fmt_layer = fmt::layer().compact();
 
     // Create a filter layer to control the verbosity of logs
     // Try to get the filter configuration from the environment variables
     // If it fails, default to the "info" log level
-    let filter_layer = 
-        EnvFilter::try_from_default_env()
-            .or_else(|_| EnvFilter::try_new("info"))?;
+    let filter_layer = EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?;
 
     // Build the tracing subscriber registry with the formatting layer,
     // the filter layer, and the error layer for enhanced error reporting

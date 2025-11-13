@@ -10,7 +10,6 @@ use auth_service::{
 
 #[tokio::main]
 async fn main() {
-    
     color_eyre::install().expect("Failed to install color_eyre");
     init_tracing().expect("Failed to initialize tracing");
 

@@ -1,9 +1,11 @@
-use std::sync::Arc;
-
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use chrono::Utc;
+use color_eyre::eyre::{Context, ContextCompat, Report};
 use jsonwebtoken::{DecodingKey, EncodingKey, Validation, decode, encode};
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use thiserror::Error;
 use tokio::sync::RwLock;
 
 use crate::domain::{models::Email, ports::BannedTokenStore};
@@ -17,6 +19,7 @@ pub fn generate_auth_cookie(email: &Email) -> Result<Cookie<'static>, GenerateTo
 }
 
 // Create cookie and set the value to the passed-in token string
+#[tracing::instrument(name = "Create Auth Cookie", skip_all)]
 fn create_auth_cookie(token: String) -> Cookie<'static> {
     Cookie::build((JWT_COOKIE_NAME, token))
         .path("/") // apply cookie to all URLs on the server
@@ -25,29 +28,44 @@ fn create_auth_cookie(token: String) -> Cookie<'static> {
         .build()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum GenerateTokenError {
+    #[error("Token error")]
     TokenError(jsonwebtoken::errors::Error),
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
+}
+
+impl PartialEq for GenerateTokenError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::UnexpectedError(_), Self::UnexpectedError(_))
+                | (Self::TokenError(_), Self::TokenError(_))
+        )
+    }
 }
 
 // Create JWT auth token
 fn generate_auth_token(email: &Email) -> Result<String, GenerateTokenError> {
     let delta = chrono::Duration::try_seconds(TOKEN_TTL_SECONDS)
-        .ok_or(GenerateTokenError::UnexpectedError)?;
+        .wrap_err("failed to calculate delta")
+        .map_err(GenerateTokenError::UnexpectedError)?;
 
     // Create JWT expiration time
     let exp = Utc::now()
         .checked_add_signed(delta)
-        .ok_or(GenerateTokenError::UnexpectedError)?
+        .wrap_err("failed to checked add signed")
+        .map_err(GenerateTokenError::UnexpectedError)?
         .timestamp();
 
     // Cast exp to a usize, which is what Claims expects
     let exp: usize = exp
         .try_into()
-        .map_err(|_| GenerateTokenError::UnexpectedError)?;
+        .wrap_err("failed to calculate expiry")
+        .map_err(GenerateTokenError::UnexpectedError)?;
 
-    let sub = email.as_ref().to_owned();
+    let sub = email.as_ref().expose_secret().to_string();
 
     let claims = Claims { sub, exp };
 
@@ -108,7 +126,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_auth_cookie() {
-        let email = Email::parse("test@example.com").unwrap();
+        let email = Email::parse("test@example.com".into()).unwrap();
         let cookie = generate_auth_cookie(&email).unwrap();
         assert_eq!(cookie.name(), JWT_COOKIE_NAME);
         assert_eq!(cookie.value().split('.').count(), 3);
@@ -130,14 +148,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_auth_token() {
-        let email = Email::parse("test@example.com").unwrap();
+        let email = Email::parse("test@example.com".into()).unwrap();
         let result = generate_auth_token(&email).unwrap();
         assert_eq!(result.split('.').count(), 3);
     }
 
     #[tokio::test]
     async fn test_validate_token_with_valid_token() {
-        let email = Email::parse("test@example.com").unwrap();
+        let email = Email::parse("test@example.com".into()).unwrap();
         let token = generate_auth_token(&email).unwrap();
         let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::default()));
         let result = validate_token(&token, banned_token_store).await.unwrap();
@@ -161,7 +179,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_token_with_banned_token() {
-        let email = Email::parse("test@example.com").unwrap();
+        let email = Email::parse("test@example.com".into()).unwrap();
         let token = generate_auth_token(&email).unwrap();
         let mut hs = HashsetBannedTokenStore::default();
         hs.add_token(&token).await.unwrap();

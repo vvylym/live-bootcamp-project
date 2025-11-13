@@ -50,7 +50,7 @@ async fn should_return_200_if_correct_code() {
         .two_fa_code_store
         .read()
         .await
-        .get_code(&Email::parse(&random_email).unwrap())
+        .get_code(&Email::parse(random_email.clone().into()).unwrap())
         .await
         .unwrap();
 
@@ -173,7 +173,7 @@ async fn should_return_401_if_incorrect_credentials() {
         .two_fa_code_store
         .read()
         .await
-        .get_code(&Email::parse(&random_email).unwrap())
+        .get_code(&Email::parse(random_email.clone().into()).unwrap())
         .await
         .unwrap();
 
@@ -273,7 +273,7 @@ async fn should_return_401_if_old_code() {
         .two_fa_code_store
         .read()
         .await
-        .get_code(&Email::parse(&random_email).unwrap())
+        .get_code(&Email::parse(random_email.clone().into()).unwrap())
         .await
         .unwrap();
 
@@ -339,7 +339,7 @@ async fn should_return_401_if_same_code_twice() {
         .two_fa_code_store
         .read()
         .await
-        .get_code(&Email::parse(&random_email).unwrap())
+        .get_code(&Email::parse(random_email.clone().into()).unwrap())
         .await
         .unwrap();
 

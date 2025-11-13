@@ -66,7 +66,6 @@ impl IntoResponse for AuthAPIError {
     }
 }
 
-
 fn log_error_chain(e: &(dyn std::error::Error + 'static)) {
     let separator =
         "\n-----------------------------------------------------------------------------------\n";

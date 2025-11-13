@@ -29,9 +29,12 @@ pub async fn handle_signup<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore,
     State(state): State<AppState<S, B, T, E>>,
     Json(request): Json<SignUpRequest>,
 ) -> Result<impl IntoResponse, AuthAPIError> {
-    let email = Email::parse(&request.email).map_err(|_| AuthAPIError::InvalidCredentials)?;
+    let email = 
+        Email::parse(request.email)
+            .map_err(|_| AuthAPIError::InvalidCredentials)?;
     let password =
-        Password::parse(&request.password).map_err(|_| AuthAPIError::InvalidCredentials)?;
+        Password::parse(request.password)
+            .map_err(|_| AuthAPIError::InvalidCredentials)?;
 
     let user = User::new(email, password, request.requires_2fa);
 
@@ -41,7 +44,8 @@ pub async fn handle_signup<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore,
         return Err(AuthAPIError::UserAlreadyExists);
     }
 
-    user_store.add_user(&user)
+    user_store
+        .add_user(&user)
         .await
         .map_err(|e| AuthAPIError::UnexpectedError(e.into()))?;
 

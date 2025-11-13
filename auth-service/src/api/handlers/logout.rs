@@ -24,6 +24,7 @@ use axum_extra::extract::{CookieJar, cookie::Cookie};
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
+#[tracing::instrument(name = "Logout", skip_all)]
 pub async fn handle_logout<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: EmailClient>(
     State(state): State<AppState<S, B, T, E>>,
     jar: CookieJar,
@@ -41,15 +42,14 @@ pub async fn handle_logout<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore,
     };
 
     // Add token to banned list
-    if state
+    if let Err(e) = state
         .banned_token_store
         .write()
         .await
         .add_token(&token)
         .await
-        .is_err()
     {
-        return (jar, Err(AuthAPIError::UnexpectedError));
+        return (jar, Err(AuthAPIError::UnexpectedError(e.into())));
     }
 
     // Remove jwt cookie

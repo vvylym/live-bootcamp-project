@@ -1,5 +1,6 @@
 use axum::{Json, extract::State, response::IntoResponse};
 use axum_extra::extract::CookieJar;
+use color_eyre::eyre::eyre;
 
 use crate::{
     AppState,
@@ -30,6 +31,7 @@ use crate::{
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
+#[tracing::instrument(name = "Verify 2FA", skip_all)]
 pub async fn handle_verify_2fa<
     S: UserStore,
     B: BannedTokenStore,
@@ -40,7 +42,7 @@ pub async fn handle_verify_2fa<
     jar: CookieJar,
     Json(request): Json<Verify2faRequest>,
 ) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>) {
-    let email = match Email::parse(&request.email) {
+    let email = match Email::parse(request.email) {
         Ok(email) => email,
         Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
     };
@@ -66,13 +68,13 @@ pub async fn handle_verify_2fa<
         return (jar, Err(AuthAPIError::IncorrectCredentials));
     }
 
-    if two_fa_code_store.remove_code(&email).await.is_err() {
-        return (jar, Err(AuthAPIError::UnexpectedError));
+    if let Err(e) = two_fa_code_store.remove_code(&email).await {
+        return (jar, Err(AuthAPIError::UnexpectedError(eyre!(e))));
     }
 
     let cookie = match generate_auth_cookie(&email) {
         Ok(cookie) => cookie,
-        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
+        Err(e) => return (jar, Err(AuthAPIError::UnexpectedError(eyre!(e)))),
     };
 
     let updated_jar = jar.add(cookie);

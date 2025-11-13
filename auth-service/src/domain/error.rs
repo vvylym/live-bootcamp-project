@@ -14,7 +14,7 @@ pub enum AuthAPIError {
     #[error("User already exists")]
     UserAlreadyExists,
     /// Indicates that the provided credentials are invalid.
-     #[error("Invalid credentials")]
+    #[error("Invalid credentials")]
     InvalidCredentials,
     /// Indicates that the provided credentials are incorrect.
     #[error("Incorrect credentials")]
@@ -23,9 +23,9 @@ pub enum AuthAPIError {
     #[error("Missing token")]
     MissingToken,
     /// Indicates that the provided token is invalid.
-     #[error("Invalid token")]
+    #[error("Invalid token")]
     InvalidToken,
     /// Indicates that an unexpected error occurred.
-     #[error("Unexpected error")]
+    #[error("Unexpected error")]
     UnexpectedError(#[source] Report),
 }

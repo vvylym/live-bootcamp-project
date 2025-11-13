@@ -25,6 +25,7 @@ use crate::{
         (status = 500, description = "Unexpected error", body = ErrorResponse, content_type = "application/json"),
     )
 )]
+#[tracing::instrument(name = "Verify Token", skip_all)]
 pub async fn handle_verify_token<
     S: UserStore,
     B: BannedTokenStore,
