@@ -90,6 +90,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "Only with actual Redis running"]
     async fn test_redis_banned_token_store() {
         // 1. Initialize Redis store
         let mut store = create_test_store();

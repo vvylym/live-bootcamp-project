@@ -22,8 +22,6 @@ impl Hash for Email {
     }
 }
 
-
-
 impl Email {
     /// Parses a string into an Email.
     /// Returns an error if the string is not a valid email address.

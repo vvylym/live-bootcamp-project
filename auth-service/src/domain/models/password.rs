@@ -25,7 +25,7 @@ impl PartialEq for Password {
         self.0.expose_secret() == other.0.expose_secret()
     }
 }
- 
+
 impl Eq for Password {}
 
 impl Hash for Password {

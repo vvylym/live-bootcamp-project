@@ -1,17 +1,16 @@
-use auth_service::{
-    api::{dtos::ErrorResponse, utils::constants::JWT_COOKIE_NAME},
-    domain::ports::BannedTokenStore,
-};
+use crate::helpers::{TestApp, get_random_email};
+use auth_service::api::dtos::ErrorResponse;
+use auth_service::api::dtos::MFARequiredResponse;
+use auth_service::api::utils::constants::JWT_COOKIE_NAME;
+use auth_service::domain::models::Email;
+use auth_service::domain::ports::TwoFACodeStore;
+use secrecy::{ExposeSecret, SecretString};
+use test_helpers::api_test;
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, ResponseTemplate};
 
-use reqwest::Url;
-use secrecy::SecretString;
-
-use super::helpers::*;
-
-#[tokio::test]
-async fn should_return_200_if_valid_jwt_cookie() {
-    let app = TestApp::new().await;
-
+#[api_test]
+async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
     let random_email = get_random_email();
 
     let signup_body = serde_json::json!({
@@ -39,65 +38,60 @@ async fn should_return_200_if_valid_jwt_cookie() {
         .expect("No auth cookie found");
 
     assert!(!auth_cookie.value().is_empty());
+}
 
-    let token = auth_cookie.value();
+#[api_test]
+async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
+    let random_email = get_random_email();
 
-    let response = app.post_logout().await;
+    let signup_body = serde_json::json!({
+        "email": random_email,
+        "password": "password123",
+        "requires2FA": true
+    });
 
-    assert_eq!(response.status().as_u16(), 200);
+    let response = app.post_signup(&signup_body).await;
 
-    let auth_cookie = response
-        .cookies()
-        .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
-        .expect("No auth cookie found");
+    assert_eq!(response.status().as_u16(), 201);
 
-    assert!(auth_cookie.value().is_empty());
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
 
-    let banned_token_store = app.banned_token_store.read().await;
-    let contains_token = banned_token_store
-        .contains_token(&SecretString::from(token))
+    let login_body = serde_json::json!({
+        "email": random_email,
+        "password": "password123"
+    });
+
+    let response = app.post_login(&login_body).await;
+
+    assert_eq!(response.status().as_u16(), 206);
+
+    let json_body = response
+        .json::<MFARequiredResponse>()
         .await
-        .expect("Failed to check if token is banned");
+        .expect("Could not deserialize response body to TwoFactorAuthResponse");
 
-    assert!(contains_token);
+    assert_eq!(json_body.message, "2FA required".to_owned());
 
-    let _ = app.clean_up().await;
-}
+    let two_fa_code_store = app.two_fa_code_store.read().await;
 
-#[tokio::test]
-async fn should_return_400_if_jwt_cookie_missing() {
-    let app = TestApp::new().await;
-
-    let response = app.post_logout().await;
+    let code_tuple = two_fa_code_store
+        .get_code(&Email::parse(SecretString::from(random_email)).unwrap())
+        .await
+        .expect("Failed to get 2FA code");
 
     assert_eq!(
-        response.status().as_u16(),
-        400,
-        "The API did not return a 400 BAD REQUEST",
+        code_tuple.0.as_ref().expose_secret(),
+        &json_body.login_attempt_id
     );
-
-    let auth_cookie = response
-        .cookies()
-        .find(|cookie| cookie.name() == JWT_COOKIE_NAME);
-
-    assert!(auth_cookie.is_none());
-
-    assert_eq!(
-        response
-            .json::<ErrorResponse>()
-            .await
-            .expect("Could not deserialize response body to ErrorResponse")
-            .error,
-        "Missing auth token".to_owned()
-    );
-
-    let _ = app.clean_up().await;
 }
 
-#[tokio::test]
-async fn should_return_400_if_logout_called_twice_in_a_row() {
-    let app = TestApp::new().await;
-
+#[api_test]
+async fn should_return_400_if_invalid_input() {
     let random_email = get_random_email();
 
     let signup_body = serde_json::json!({
@@ -110,78 +104,116 @@ async fn should_return_400_if_logout_called_twice_in_a_row() {
 
     assert_eq!(response.status().as_u16(), 201);
 
-    let login_body = serde_json::json!({
-        "email": random_email,
-        "password": "password123",
-    });
+    let test_cases = vec![
+        ("invalid_email", "password123"),
+        (random_email.as_str(), "invalid"),
+        ("", "password123"),
+        (random_email.as_str(), ""),
+        ("", ""),
+    ];
 
-    let response = app.post_login(&login_body).await;
+    for (email, password) in test_cases {
+        let login_body = serde_json::json!({
+            "email": email,
+            "password": password
+        });
+        let response = app.post_login(&login_body).await;
 
-    assert_eq!(response.status().as_u16(), 200);
+        assert_eq!(
+            response.status().as_u16(),
+            400,
+            "Failed for input: {:?}",
+            login_body
+        );
 
-    let auth_cookie = response
-        .cookies()
-        .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
-        .expect("No auth cookie found");
-
-    assert!(!auth_cookie.value().is_empty());
-
-    let response = app.post_logout().await;
-    assert_eq!(response.status().as_u16(), 200);
-
-    let auth_cookie = response
-        .cookies()
-        .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
-        .expect("No auth cookie found");
-
-    assert!(auth_cookie.value().is_empty());
-
-    let response = app.post_logout().await;
-    assert_eq!(response.status().as_u16(), 400);
-
-    assert_eq!(
-        response
-            .json::<ErrorResponse>()
-            .await
-            .expect("Could not deserialize response body to ErrorResponse")
-            .error,
-        "Missing auth token".to_owned()
-    );
-
-    let _ = app.clean_up().await;
+        assert_eq!(
+            response
+                .json::<ErrorResponse>()
+                .await
+                .expect("Could not deserialize response body to ErrorResponse")
+                .error,
+            "Invalid credentials".to_owned()
+        );
+    }
 }
 
-#[tokio::test]
-async fn should_return_401_if_invalid_token() {
-    let app = TestApp::new().await;
+#[api_test]
+async fn should_return_401_if_incorrect_credentials() {
+    let random_email = get_random_email();
 
-    // add invalid cookie
-    app.cookie_jar.add_cookie_str(
-        &format!(
-            "{}=invalid; HttpOnly; SameSite=Lax; Secure; Path=/",
-            JWT_COOKIE_NAME
-        ),
-        &Url::parse("http://127.0.0.1").expect("Failed to parse URL"),
-    );
+    let signup_body = serde_json::json!({
+        "email": random_email,
+        "password": "password123",
+        "requires2FA": false
+    });
 
-    let response = app.post_logout().await;
+    let response = app.post_signup(&signup_body).await;
 
-    assert_eq!(response.status().as_u16(), 401);
+    assert_eq!(response.status().as_u16(), 201);
 
-    let auth_cookie = response
-        .cookies()
-        .find(|cookie| cookie.name() == JWT_COOKIE_NAME);
+    let test_cases = vec![
+        (random_email.as_str(), "wrong-password"),
+        ("wrong@email.com", "password123"),
+        ("wrong@email.com", "wrong-password"),
+    ];
 
-    assert!(auth_cookie.is_none());
+    for (email, password) in test_cases {
+        let login_body = serde_json::json!({
+            "email": email,
+            "password": password
+        });
+        let response = app.post_login(&login_body).await;
 
-    assert_eq!(
-        response
-            .json::<ErrorResponse>()
-            .await
-            .expect("Could not deserialize response body to ErrorResponse")
-            .error,
-        "Invalid auth token".to_owned()
-    );
+        assert_eq!(
+            response.status().as_u16(),
+            401,
+            "Failed for input: {:?}",
+            login_body
+        );
 
-    let _ = app.clean_up().await;
+        assert_eq!(
+            response
+                .json::<ErrorResponse>()
+                .await
+                .expect("Could not deserialize response body to ErrorResponse")
+                .error,
+            "Incorrect credentials".to_owned()
+        );
+    }
+}
+
+#[api_test]
+async fn should_return_422_if_malformed_credentials() {
+    let random_email = get_random_email();
+
+    let signup_body = serde_json::json!({
+        "email": random_email,
+        "password": "password123",
+        "requires2FA": false
+    });
+
+    let response = app.post_signup(&signup_body).await;
+
+    assert_eq!(response.status().as_u16(), 201);
+
+    let test_cases = [
+        serde_json::json!({
+            "password": "password123",
+        }),
+        serde_json::json!({
+            "email": random_email,
+        }),
+        serde_json::json!({}),
+    ];
+
+    for test_case in test_cases {
+        let response = app.post_login(&test_case).await;
+
+        assert_eq!(
+            response.status().as_u16(),
+            422,
+            "Failed for input: {:?}",
+            test_case
+        );
+    }
 }

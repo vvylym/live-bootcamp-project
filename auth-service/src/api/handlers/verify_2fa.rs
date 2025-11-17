@@ -1,7 +1,6 @@
 use axum::{Json, extract::State, response::IntoResponse};
 use axum_extra::extract::CookieJar;
 use color_eyre::eyre::eyre;
-use secrecy::ExposeSecret;
 
 use crate::{
     AppState,

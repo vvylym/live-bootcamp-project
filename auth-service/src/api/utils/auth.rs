@@ -69,8 +69,7 @@ fn generate_auth_token(email: &Email) -> Result<SecretString, GenerateTokenError
 
     let claims = Claims { sub, exp };
 
-    create_token(&claims)
-        .map_err(GenerateTokenError::TokenError)
+    create_token(&claims).map_err(GenerateTokenError::TokenError)
 }
 
 // Check if JWT auth token is valid by decoding it using the JWT secret
@@ -78,11 +77,7 @@ pub async fn validate_token(
     token: &SecretString,
     banned_token_store: Arc<RwLock<impl BannedTokenStore>>,
 ) -> Result<Claims, jsonwebtoken::errors::Error> {
-    match banned_token_store
-            .read()
-            .await
-            .contains_token(token)
-            .await {
+    match banned_token_store.read().await.contains_token(token).await {
         Ok(value) => {
             if value {
                 return Err(jsonwebtoken::errors::Error::from(

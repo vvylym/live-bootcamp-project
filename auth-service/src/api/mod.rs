@@ -16,7 +16,7 @@ pub struct AppState<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: Ema
     pub user_store: Arc<RwLock<S>>,
     pub banned_token_store: Arc<RwLock<B>>,
     pub two_fa_store: Arc<RwLock<T>>,
-    pub email_client: Arc<RwLock<E>>,
+    pub email_client: Arc<E>,
 }
 
 impl<S, B, T, E> AppState<S, B, T, E>
@@ -30,7 +30,7 @@ where
         user_store: Arc<RwLock<S>>,
         banned_token_store: Arc<RwLock<B>>,
         two_fa_store: Arc<RwLock<T>>,
-        email_client: Arc<RwLock<E>>,
+        email_client: Arc<E>,
     ) -> Self {
         Self {
             user_store,

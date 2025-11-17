@@ -91,11 +91,11 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
                     .wrap_err("failed to deserialize 2FA tuple") // New!
                     .map_err(TwoFACodeStoreError::UnexpectedError)?; // Updated!
 
-                let login_attempt_id =
-                    LoginAttemptId::parse(data.0.into()).map_err(TwoFACodeStoreError::UnexpectedError)?;
+                let login_attempt_id = LoginAttemptId::parse(data.0.into())
+                    .map_err(TwoFACodeStoreError::UnexpectedError)?;
 
-                let email_code =
-                    TwoFACode::parse(data.1.into()).map_err(TwoFACodeStoreError::UnexpectedError)?;
+                let email_code = TwoFACode::parse(data.1.into())
+                    .map_err(TwoFACodeStoreError::UnexpectedError)?;
 
                 Ok((login_attempt_id, email_code))
             }

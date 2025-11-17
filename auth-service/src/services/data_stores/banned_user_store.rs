@@ -1,4 +1,4 @@
-use secrecy::{SecretString, ExposeSecret};
+use secrecy::{ExposeSecret, SecretString};
 
 use crate::domain::ports::{BannedTokenStore, BannedTokenStoreError};
 use std::collections::HashSet;

@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use color_eyre::eyre::{Result, eyre};
 use rand::Rng;
-use secrecy::{SecretString, ExposeSecret};
+use secrecy::{ExposeSecret, SecretString};
 
 #[derive(Clone, Debug)]
 pub struct TwoFACode(SecretString);
@@ -21,11 +21,10 @@ impl Hash for TwoFACode {
     }
 }
 
-
 impl TwoFACode {
     pub fn parse(code: SecretString) -> Result<Self> {
         // Ensure `code` is a valid 6-digit code
-        match is_valid_code(&code.expose_secret()) {
+        match is_valid_code(code.expose_secret()) {
             true => Ok(Self(code)),
             _ => Err(eyre!("Invalid 2FA code")),
         }

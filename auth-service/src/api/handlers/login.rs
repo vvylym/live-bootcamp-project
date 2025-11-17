@@ -90,9 +90,7 @@ async fn handle_2fa<S: UserStore, B: BannedTokenStore, T: TwoFACodeStore, E: Ema
 
     if let Err(e) = state
         .email_client
-        .read()
-        .await
-        .send_email(email, "2FA Code", &two_fa_code.as_ref().expose_secret().to_owned())
+        .send_email(email, "2FA Code", two_fa_code.as_ref().expose_secret())
         .await
     {
         return (jar, Err(AuthAPIError::UnexpectedError(e)));

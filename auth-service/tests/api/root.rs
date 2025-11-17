@@ -2,7 +2,7 @@ use super::helpers::TestApp;
 
 #[tokio::test]
 async fn test_root() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let response = app.get_root().await;
 

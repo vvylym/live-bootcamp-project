@@ -1,11 +1,10 @@
 use auth_service::api::dtos::{ErrorResponse, SignUpResponse};
+use test_helpers::api_test;
 
 use crate::helpers::{TestApp, get_random_email};
 
-#[tokio::test]
+#[api_test]
 async fn should_return_201_if_valid_input() {
-    let app = TestApp::new().await;
-
     let random_email = get_random_email();
 
     let signup_body = serde_json::json!({
@@ -29,14 +28,10 @@ async fn should_return_201_if_valid_input() {
             .expect("Could not deserialize response body to UserBody"),
         expected_response
     );
-
-    let _ = app.clean_up().await;
 }
 
-#[tokio::test]
+#[api_test]
 async fn should_return_400_if_invalid_input() {
-    let app = TestApp::new().await;
-
     let random_email = get_random_email();
 
     let input = [
@@ -80,14 +75,10 @@ async fn should_return_400_if_invalid_input() {
             "Invalid credentials".to_owned()
         );
     }
-
-    let _ = app.clean_up().await;
 }
 
-#[tokio::test]
+#[api_test]
 async fn should_return_409_if_email_already_exists() {
-    let app = TestApp::new().await;
-
     let random_email = get_random_email();
 
     let signup_body = serde_json::json!({
@@ -112,14 +103,10 @@ async fn should_return_409_if_email_already_exists() {
             .error,
         "User already exists".to_owned()
     );
-
-    let _ = app.clean_up().await;
 }
 
-#[tokio::test]
+#[api_test]
 async fn should_return_422_if_malformed_input() {
-    let app = TestApp::new().await;
-
     let random_email = get_random_email();
 
     let test_cases = [
@@ -152,6 +139,4 @@ async fn should_return_422_if_malformed_input() {
             test_case
         );
     }
-
-    let _ = app.clean_up().await;
 }
